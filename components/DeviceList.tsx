@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink, View } from '../types';
-import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon } from './icons/Icons';
+import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon, TrashIcon, ViewGridIcon } from './icons/Icons';
 import { ExportEncryptionModal } from './ExportEncryptionModal';
 import { ImportDecryptionModal } from './ImportDecryptionModal';
 
@@ -17,6 +17,7 @@ interface DeviceListProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onPrint: () => void;
+  onOpenRecycleBin: () => void;
 }
 
 const DeviceIcon = ({ type }: { type: DeviceType }) => {
@@ -40,7 +41,7 @@ const DeviceIcon = ({ type }: { type: DeviceType }) => {
   }
 };
 
-export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, importConfiguration, onSelectDevice, selectedDeviceId, onAddDevice, currentView, setCurrentView, searchQuery, setSearchQuery, onPrint }) => {
+export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, importConfiguration, onSelectDevice, selectedDeviceId, onAddDevice, currentView, setCurrentView, searchQuery, setSearchQuery, onPrint, onOpenRecycleBin }) => {
   const [isExportEncryptModalOpen, setExportEncryptModalOpen] = useState(false);
   const [isImportDecryptModalOpen, setImportDecryptModalOpen] = useState(false);
   const [encryptedConfigToImport, setEncryptedConfigToImport] = useState<{ salt: string; data: string } | null>(null);
@@ -155,6 +156,12 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, impor
                               </button>
                           </li>
                           <hr className="border-slate-600 my-1" />
+                           <li>
+                              <button onClick={() => { onOpenRecycleBin(); setActionsMenuOpen(false); }} className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-600">
+                                  <TrashIcon className="w-5 h-5" />
+                                  <span>Recycle Bin</span>
+                              </button>
+                          </li>
                           <li>
                               <button onClick={() => { onPrint(); setActionsMenuOpen(false); }} className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-600">
                                   <PrintIcon className="w-5 h-5" />
@@ -192,6 +199,17 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, impor
               >
                 <DiagramIcon className="w-5 h-5" />
                 <span className="font-medium">Topology Diagram</span>
+              </button>
+            </li>
+            <li className="mb-2">
+              <button
+                onClick={() => setCurrentView(View.PHYSICAL)}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors text-slate-300 ${
+                  currentView === View.PHYSICAL ? 'bg-cyan-500/20 text-cyan-300' : 'hover:bg-slate-700/50'
+                }`}
+              >
+                <ViewGridIcon className="w-5 h-5" />
+                <span className="font-medium">Physical Layout</span>
               </button>
             </li>
             <hr className="border-t border-slate-700 my-2" />

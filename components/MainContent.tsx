@@ -1,7 +1,8 @@
 import React from 'react';
-import { Device, MacFormat, View, TopologyLink, Connection } from '../types';
+import { Device, MacFormat, View, TopologyLink, Connection, Room, Rack, DevicePlacement } from '../types';
 import { NetworkDiagram } from './NetworkDiagram';
 import { DeviceDetails } from './DeviceDetails';
+import { PhysicalView } from './PhysicalView';
 
 interface MainContentProps {
   view: View;
@@ -16,12 +17,80 @@ interface MainContentProps {
   topology: TopologyLink[];
   addTopologyLink: (from: string, to: string) => void;
   deleteTopologyLink: (linkId: string) => void;
+  rooms: Room[];
+  racks: Rack[];
+  addRoom: (name: string) => void;
+  updateRoom: (roomId: string, updates: Partial<Room>) => void;
+  deleteRoom: (roomId: string) => void;
+  addRack: (rack: Omit<Rack, 'id'>) => void;
+  updateRack: (rackId: string, updates: Partial<Rack>) => void;
+  deleteRack: (rackId: string) => void;
+  updateDevicePlacement: (deviceId: string, placement: DevicePlacement | undefined) => void;
 }
 
-export const MainContent: React.FC<MainContentProps> = (props) => {
-  if (props.view === View.DEVICE_DETAILS && props.selectedDevice) {
-    return <DeviceDetails device={props.selectedDevice} {...props} />;
+export const MainContent: React.FC<MainContentProps> = ({
+  view,
+  selectedDevice,
+  macFormat,
+  addConnection,
+  updateConnection,
+  deleteConnection,
+  updateDevice,
+  deleteDevice,
+  devices,
+  topology,
+  addTopologyLink,
+  deleteTopologyLink,
+  rooms,
+  racks,
+  addRoom,
+  updateRoom,
+  deleteRoom,
+  addRack,
+  updateRack,
+  deleteRack,
+  updateDevicePlacement,
+}) => {
+  if (view === View.DEVICE_DETAILS && selectedDevice) {
+    return (
+      <DeviceDetails
+        device={selectedDevice}
+        macFormat={macFormat}
+        addConnection={addConnection}
+        updateConnection={updateConnection}
+        deleteConnection={deleteConnection}
+        updateDevice={updateDevice}
+        deleteDevice={deleteDevice}
+        rooms={rooms}
+        racks={racks}
+        updateDevicePlacement={updateDevicePlacement}
+      />
+    );
   }
 
-  return <NetworkDiagram devices={props.devices} topology={props.topology} addTopologyLink={props.addTopologyLink} deleteTopologyLink={props.deleteTopologyLink} />;
+  if (view === View.PHYSICAL) {
+    return (
+      <PhysicalView
+        devices={devices}
+        rooms={rooms}
+        racks={racks}
+        addRoom={addRoom}
+        updateRoom={updateRoom}
+        deleteRoom={deleteRoom}
+        addRack={addRack}
+        updateRack={updateRack}
+        deleteRack={deleteRack}
+        updateDevicePlacement={updateDevicePlacement}
+      />
+    );
+  }
+
+  return (
+    <NetworkDiagram
+      devices={devices}
+      topology={topology}
+      addTopologyLink={addTopologyLink}
+      deleteTopologyLink={deleteTopologyLink}
+    />
+  );
 };

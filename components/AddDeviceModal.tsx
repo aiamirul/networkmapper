@@ -5,7 +5,7 @@ import { XIcon } from './icons/Icons';
 
 interface AddDeviceModalProps {
   onClose: () => void;
-  onAddDevice: (device: Omit<Device, 'id' | 'connections' | 'changeLog'>) => void;
+  onAddDevice: (device: Omit<Device, 'id' | 'connections' | 'changeLog' | 'placement'>) => void;
 }
 
 export const AddDeviceModal: React.FC<AddDeviceModalProps> = ({ onClose, onAddDevice }) => {
@@ -13,6 +13,7 @@ export const AddDeviceModal: React.FC<AddDeviceModalProps> = ({ onClose, onAddDe
   const [type, setType] = useState<DeviceType>(DeviceType.SWITCH);
   const [ipAddress, setIpAddress] = useState('');
   const [model, setModel] = useState('');
+  const [uSize, setUSize] = useState(1);
   const [iconUrl, setIconUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +23,7 @@ export const AddDeviceModal: React.FC<AddDeviceModalProps> = ({ onClose, onAddDe
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name && ipAddress && model) {
-      onAddDevice({ name, type, ipAddress, model, iconUrl: iconUrl || undefined, username, password, details });
+      onAddDevice({ name, type, ipAddress, model, uSize, iconUrl: iconUrl || undefined, username, password, details });
       onClose();
     }
   };
@@ -37,55 +38,35 @@ export const AddDeviceModal: React.FC<AddDeviceModalProps> = ({ onClose, onAddDe
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-slate-400 mb-1">Device Name</label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="type" className="block text-sm font-medium text-slate-400 mb-1">Device Type</label>
-            <select
-              id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value as DeviceType)}
-              className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            >
-              <option value={DeviceType.SWITCH}>Switch</option>
-              <option value={DeviceType.ROUTER}>Router</option>
-              <option value={DeviceType.PC}>PC</option>
-              <option value={DeviceType.SERVER}>Server</option>
-              <option value={DeviceType.AP}>Access Point</option>
-              <option value={DeviceType.PRINTER}>Printer</option>
-              <option value={DeviceType.OTHER}>Other</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="ipAddress" className="block text-sm font-medium text-slate-400 mb-1">IP Address</label>
-            <input
-              type="text"
-              id="ipAddress"
-              value={ipAddress}
-              onChange={(e) => setIpAddress(e.target.value)}
-              className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              required
-            />
-          </div>
-           <div>
-            <label htmlFor="model" className="block text-sm font-medium text-slate-400 mb-1">Model</label>
-            <input
-              type="text"
-              id="model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label htmlFor="name" className="block text-sm font-medium text-slate-400 mb-1">Device Name</label>
+              <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" required />
+            </div>
+            <div>
+              <label htmlFor="type" className="block text-sm font-medium text-slate-400 mb-1">Device Type</label>
+              <select id="type" value={type} onChange={(e) => setType(e.target.value as DeviceType)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" >
+                <option value={DeviceType.SWITCH}>Switch</option>
+                <option value={DeviceType.ROUTER}>Router</option>
+                <option value={DeviceType.PC}>PC</option>
+                <option value={DeviceType.SERVER}>Server</option>
+                <option value={DeviceType.AP}>Access Point</option>
+                <option value={DeviceType.PRINTER}>Printer</option>
+                <option value={DeviceType.OTHER}>Other</option>
+              </select>
+            </div>
+             <div>
+                <label htmlFor="uSize" className="block text-sm font-medium text-slate-400 mb-1">U Size</label>
+                <input type="number" id="uSize" value={uSize} onChange={(e) => setUSize(parseInt(e.target.value, 10) || 1)} min="1" className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" required />
+            </div>
+            <div>
+              <label htmlFor="ipAddress" className="block text-sm font-medium text-slate-400 mb-1">IP Address</label>
+              <input type="text" id="ipAddress" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" required />
+            </div>
+             <div>
+              <label htmlFor="model" className="block text-sm font-medium text-slate-400 mb-1">Model</label>
+              <input type="text" id="model" value={model} onChange={(e) => setModel(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" required />
+            </div>
           </div>
           <hr className="border-slate-700" />
           <h3 className="text-md font-semibold text-slate-300">Optional Details</h3>

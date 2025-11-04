@@ -9,13 +9,14 @@ import { NetworkAnalysisModal } from './components/NetworkAnalysisModal';
 import { MacFormat, View } from './types';
 import { formatMac } from './utils/macFormatter';
 import { SettingsModal } from './components/SettingsModal';
+import { RecycleBinModal } from './components/RecycleBinModal';
 
 const App: React.FC = () => {
   const {
     devices,
     addDevice,
     updateDevice,
-    deleteDevice,
+    deleteDevice: deleteDeviceFromHook,
     addConnection,
     updateConnection,
     deleteConnection,
@@ -23,6 +24,19 @@ const App: React.FC = () => {
     addTopologyLink,
     deleteTopologyLink,
     importConfiguration,
+    deletedDevices,
+    restoreDevice,
+    permanentlyDeleteDevice,
+    emptyRecycleBin,
+    rooms,
+    racks,
+    addRoom,
+    updateRoom,
+    deleteRoom,
+    addRack,
+    updateRack,
+    deleteRack,
+    updateDevicePlacement,
   } = useNetworkManager();
 
   const [macFormat, setMacFormat] = useState<MacFormat>(MacFormat.HYPHEN);
@@ -31,6 +45,7 @@ const App: React.FC = () => {
   const [isAddDeviceModalOpen, setAddDeviceModalOpen] = useState(false);
   const [isAnalysisModalOpen, setAnalysisModalOpen] = useState(false);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [isRecycleBinOpen, setRecycleBinOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const selectedDevice = devices.find(d => d.id === selectedDeviceId) || null;
@@ -43,11 +58,17 @@ const App: React.FC = () => {
   }, []);
   
   const handleSetView = (view: View) => {
-    if (view === View.DIAGRAM) {
+    if (view === View.DIAGRAM || view === View.PHYSICAL) {
         setSelectedDeviceId(null);
     }
     setCurrentView(view);
   }
+
+  const handleDeleteDevice = useCallback((deviceId: string) => {
+    deleteDeviceFromHook(deviceId);
+    setSelectedDeviceId(null);
+    setCurrentView(View.DIAGRAM);
+  }, [deleteDeviceFromHook]);
 
   const handlePrint = () => {
     window.print();
@@ -76,6 +97,7 @@ const App: React.FC = () => {
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               onPrint={handlePrint}
+              onOpenRecycleBin={() => setRecycleBinOpen(true)}
             />
           </aside>
           <section className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto">
@@ -87,11 +109,20 @@ const App: React.FC = () => {
               updateConnection={updateConnection}
               deleteConnection={deleteConnection}
               updateDevice={updateDevice}
-              deleteDevice={deleteDevice}
+              deleteDevice={handleDeleteDevice}
               devices={devices}
               topology={topology}
               addTopologyLink={addTopologyLink}
               deleteTopologyLink={deleteTopologyLink}
+              rooms={rooms}
+              racks={racks}
+              addRoom={addRoom}
+              updateRoom={updateRoom}
+              deleteRoom={deleteRoom}
+              addRack={addRack}
+              updateRack={updateRack}
+              deleteRack={deleteRack}
+              updateDevicePlacement={updateDevicePlacement}
             />
           </section>
         </main>
@@ -110,10 +141,18 @@ const App: React.FC = () => {
         {isSettingsModalOpen && (
             <SettingsModal
                 onClose={() => setSettingsModalOpen(false)}
-                networkState={{ devices, topology }}
+                networkState={{ devices, topology, rooms, racks }}
                 importConfiguration={importConfiguration}
             />
         )}
+        <RecycleBinModal
+            isOpen={isRecycleBinOpen}
+            onClose={() => setRecycleBinOpen(false)}
+            deletedDevices={deletedDevices}
+            onRestore={restoreDevice}
+            onPermanentlyDelete={permanentlyDeleteDevice}
+            onEmpty={emptyRecycleBin}
+        />
       </div>
       <div id="printable-content" className="hidden">
         <div className="print-container">

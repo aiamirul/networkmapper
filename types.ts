@@ -41,6 +41,24 @@ export interface KeyFile {
     content: string; // Base64 encoded content
 }
 
+export interface DevicePlacement {
+    roomId: string;
+    rackId: string;
+    uPosition: number;
+}
+
+export interface Room {
+    id: string;
+    name: string;
+}
+
+export interface Rack {
+    id: string;
+    name: string;
+    roomId: string;
+    uHeight: number;
+}
+
 export interface Device {
   id:string;
   name: string;
@@ -48,12 +66,15 @@ export interface Device {
   ipAddress: string;
   model: string;
   connections: Connection[];
+  uSize: number; // Physical size in rack units, e.g., 1, 2, 4
+  placement?: DevicePlacement;
   iconUrl?: string; // Optional URL for a custom icon
   username?: string;
   password?: string;
   details?: string;
   changeLog?: ChangeLogEntry[];
   keyFile?: KeyFile;
+  deletedAt?: string;
 }
 
 export interface TopologyLink {
@@ -64,7 +85,8 @@ export interface TopologyLink {
 
 export enum View {
     DIAGRAM = 'DIAGRAM',
-    DEVICE_DETAILS = 'DEVICE_DETAILS'
+    DEVICE_DETAILS = 'DEVICE_DETAILS',
+    PHYSICAL = 'PHYSICAL',
 }
 
 export interface EncryptedConfig {

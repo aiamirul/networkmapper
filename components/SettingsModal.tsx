@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { XIcon, UploadIcon, DownloadIcon, RefreshIcon } from './icons/Icons';
-import { RemoteConfig, Device, TopologyLink } from '../types';
+import { RemoteConfig, Device, TopologyLink, Room, Rack } from '../types';
 import { encryptForRemote, decryptFromRemote } from '../services/cryptoService';
 import { fetchRemoteConfigs, saveRemoteConfig } from '../services/api';
 
 interface SettingsModalProps {
   onClose: () => void;
-  networkState: { devices: Device[], topology: TopologyLink[] };
-  importConfiguration: (config: { devices: Device[], topology: TopologyLink[] }) => void;
+  networkState: { devices: Device[], topology: TopologyLink[], rooms: Room[], racks: Rack[] };
+  importConfiguration: (config: { devices: Device[], topology: TopologyLink[], rooms: Room[], racks: Rack[] }) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkState, importConfiguration }) => {
@@ -95,7 +95,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
         const decryptedData = await decryptFromRemote(config.data, passphrase);
 
         if (decryptedData && Array.isArray(decryptedData.devices) && Array.isArray(decryptedData.topology)) {
-            importConfiguration(decryptedData);
+            importConfiguration(decryptedData as any);
             setStatus('Configuration loaded successfully!');
             setTimeout(onClose, 1000);
         } else {
