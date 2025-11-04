@@ -1,0 +1,256 @@
+
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { Device, DeviceType, TopologyLink } from '../types';
+import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon } from './icons/Icons';
+import * as d3 from 'd3';
+
+// Fix: Explicitly add d3.SimulationNodeDatum properties to the Node interface 
+// to resolve TypeScript errors where these properties were not being correctly inferred.
+interface Node extends d3.SimulationNodeDatum {
+    id: string;
+    device: Device;
+    x?: number;
+    y?: number;
+    fx?: number | null;
+    fy?: number | null;
+}
+
+interface Link extends d3.SimulationLinkDatum<Node> {
+    id: string;
+    source: string;
+    target: string;
+}
+
+interface NetworkDiagramProps {
+    devices: Device[];
+    topology: TopologyLink[];
+    addTopologyLink: (from: string, to: string) => void;
+    deleteTopologyLink: (linkId: string) => void;
+}
+
+const getDeviceIconSvg = (type: DeviceType): string => {
+    // Returns a group with a transformed path for centering/scaling
+    const size = 24; // viewBox size
+    const scale = 1.4;
+    const translation = -(size / 2);
+    const transform = `scale(${scale}) translate(${translation}, ${translation})`;
+
+    const paths: Record<DeviceType, string> = {
+        [DeviceType.SWITCH]: `<path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+        [DeviceType.ROUTER]: `<path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" /><rect x="3" y="10" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>`,
+        [DeviceType.PC]: `<path d="M12 18.5v-3.5m-4.5 3.5h9M5.625 5.5h12.75a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H5.625a1 1 0 0 1-1-1v-6.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+        [DeviceType.SERVER]: `<path d="M3.375 6.375h17.25M6.375 9.375h1.5m-1.5 6h1.5m1.5-6h1.5m4.5 0h1.5m-9 9h9m-12-15a2 2 0 0 1 2-2h13.25a2 2 0 0 1 2 2v13.25a2 2 0 0 1-2 2H5.375a2 2 0 0 1-2-2V4.375Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+        [DeviceType.AP]: `<path d="M12 5c3.866 0 7 1.79 7 4m-14 0c0-2.21 3.134-4 7-4m-9 8h2m14 0h2m-10-4a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+        [DeviceType.PRINTER]: `<path d="M8.625 15.375v4.5m6.75-4.5v4.5m-10.5-9h14.25v-6a1 1 0 0 0-1-1H6.375a1 1 0 0 0-1 1v6Zm0 0h14.25m-14.25 0a2 2 0 0 0-2 2v4.5a1 1 0 0 0 1 1h16.25a1 1 0 0 0 1-1v-4.5a2 2 0 0 0-2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+        [DeviceType.OTHER]: `<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+    };
+
+    const path = paths[type] || paths[DeviceType.SWITCH];
+    return `<g transform="${transform}">${path}</g>`;
+};
+
+export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topology, addTopologyLink, deleteTopologyLink }) => {
+    const svgRef = useRef<SVGSVGElement>(null);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [linking, setLinking] = useState<string | null>(null);
+
+    const nodes = useMemo<Node[]>(() => devices.map(device => ({ id: device.id, device })), [devices]);
+    const links = useMemo<Link[]>(() => topology.map(link => ({ id: link.id, source: link.from, target: link.to })), [topology]);
+
+    useEffect(() => {
+        const resizeObserver = new ResizeObserver(entries => {
+            if (entries[0]) {
+                const { width, height } = entries[0].contentRect;
+                setDimensions({ width, height });
+            }
+        });
+
+        if (svgRef.current?.parentElement) {
+            resizeObserver.observe(svgRef.current.parentElement);
+        }
+
+        return () => resizeObserver.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (!svgRef.current || dimensions.width === 0) return;
+
+        const simulation = d3.forceSimulation<Node>(nodes)
+            .force("link", d3.forceLink<Node, Link>(links).id(d => d.id).distance(200))
+            .force("charge", d3.forceManyBody().strength(-400))
+            .force("center", d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
+            .on("tick", ticked);
+
+        const svg = d3.select(svgRef.current);
+        svg.selectAll("*").remove(); // Clear previous render
+        
+        const g = svg.append("g");
+
+        const link = g.append("g")
+            .attr("stroke", "#475569")
+            .attr("stroke-opacity", 0.6)
+            .selectAll("line")
+            .data(links)
+            .join("line")
+            .attr("stroke-width", 2.5)
+            .attr("data-link-id", d => d.id);
+            
+        const node = g.append("g")
+            .selectAll("g")
+            .data(nodes)
+            .join("g")
+            .attr("class", "cursor-pointer")
+            .call(d3.drag<any, Node>()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        node.append("circle")
+            .attr("r", 30)
+            .attr("fill", "#1e293b")
+            .attr("stroke", "#475569")
+            .attr("stroke-width", 2);
+
+        // Icon Handling
+        const nodeIcon = node.append("g").attr("class", "node-icon");
+
+        nodeIcon.filter(d => !!d.device.iconUrl)
+            .append("image")
+            .attr("href", d => d.device.iconUrl!)
+            .attr("x", -20)
+            .attr("y", -20)
+            .attr("height", 40)
+            .attr("width", 40)
+            .attr("clip-path", "circle(20px)")
+            .on("error", function(event, d) {
+                const parent = d3.select(this.parentNode);
+                d3.select(this).remove();
+                parent.append("g")
+                    .html(getDeviceIconSvg(d.device.type))
+                    .attr("color", "#e2e8f0");
+            });
+        
+        nodeIcon.filter(d => !d.device.iconUrl)
+            .append("g")
+            .html(d => getDeviceIconSvg(d.device.type))
+            .attr("color", "#e2e8f0");
+
+        node.append("text")
+            .attr("y", 45)
+            .attr("text-anchor", "middle")
+            .attr("fill", "#94a3b8")
+            .attr("font-size", "12px")
+            .text(d => d.device.name);
+        
+        node.on("click", (event, d) => {
+            if (linking) {
+                addTopologyLink(linking, d.id);
+                setLinking(null);
+            }
+        });
+        
+        function ticked() {
+            link
+                .attr("x1", d => (d.source as Node).x ?? 0)
+                .attr("y1", d => (d.source as Node).y ?? 0)
+                .attr("x2", d => (d.target as Node).x ?? 0)
+                .attr("y2", d => (d.target as Node).y ?? 0);
+
+            node.attr("transform", d => `translate(${d.x}, ${d.y})`);
+        }
+
+        function dragstarted(event: d3.D3DragEvent<any, Node, any>, d: Node) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event: d3.D3DragEvent<any, Node, any>, d: Node) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event: d3.D3DragEvent<any, Node, any>, d: Node) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+    }, [nodes, links, dimensions, linking, addTopologyLink]);
+
+    const handleNodeLinkClick = (nodeId: string) => {
+        setLinking(nodeId);
+    };
+    
+    const deviceTypeIcons: Record<DeviceType, React.FC<{className?: string}>> = {
+        [DeviceType.ROUTER]: RouterIcon,
+        [DeviceType.SWITCH]: SwitchIcon,
+        [DeviceType.PC]: PCIcon,
+        [DeviceType.SERVER]: ServerIcon,
+        [DeviceType.AP]: APIcon,
+        [DeviceType.PRINTER]: PrinterIcon,
+        [DeviceType.OTHER]: SettingsIcon,
+    };
+
+    return (
+        <div className="h-full w-full bg-slate-800/50 rounded-lg flex flex-col relative">
+            <h3 className="text-xl font-semibold p-4 border-b border-slate-700/50 text-slate-200">Network Topology</h3>
+            {linking && (
+                <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-cyan-900/80 backdrop-blur-sm text-cyan-200 px-4 py-2 rounded-lg z-20 flex items-center gap-2">
+                    <LinkIcon className="w-5 h-5 animate-pulse" />
+                    <span>Select a device to link to...</span>
+                    <button onClick={() => setLinking(null)} className="p-1 hover:bg-cyan-700 rounded-full">
+                        <XIcon className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+            <div className="flex-grow relative p-4" ref={el => { if (el) svgRef.current = el.querySelector('svg'); }}>
+                <svg ref={svgRef} width={dimensions.width - 32} height={dimensions.height - 32} className="absolute"></svg>
+            </div>
+            <div className="p-4 border-t border-slate-700/50 flex flex-wrap gap-4">
+                <div>
+                    <h4 className="font-semibold mb-2">Devices</h4>
+                    <div className="flex flex-wrap gap-2">
+                    {devices.map(device => {
+                        const Icon = deviceTypeIcons[device.type] || deviceTypeIcons.OTHER;
+                        return (
+                        <div key={device.id} className="bg-slate-700/50 rounded-md px-3 py-1 flex items-center gap-2">
+                            <Icon className="w-4 h-4"/>
+                            <span className="text-sm">{device.name}</span>
+                            <button
+                                onClick={() => handleNodeLinkClick(device.id)}
+                                disabled={!!linking}
+                                className="p-1 rounded-full hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={`Create link from ${device.name}`}
+                            >
+                                <LinkIcon className="w-4 h-4"/>
+                            </button>
+                        </div>
+                    )})}
+                    </div>
+                </div>
+                 <div>
+                    <h4 className="font-semibold mb-2">Links</h4>
+                    <div className="flex flex-wrap gap-2">
+                        {topology.map(link => {
+                            const fromDevice = devices.find(d => d.id === link.from);
+                            const toDevice = devices.find(d => d.id === link.to);
+                            if (!fromDevice || !toDevice) return null;
+                            return (
+                                <div key={link.id} className="bg-slate-700/50 rounded-md px-3 py-1 flex items-center gap-2 text-sm">
+                                    <span>{fromDevice.name}</span>
+                                    <span className="text-slate-400">&lt;-&gt;</span>
+                                    <span>{toDevice.name}</span>
+                                     <button onClick={() => deleteTopologyLink(link.id)} className="p-1 rounded-full hover:bg-red-500/50" title="Delete link">
+                                        <TrashIcon className="w-4 h-4 text-red-400"/>
+                                    </button>
+                                </div>
+                            )
+                        })}
+                         {topology.length === 0 && <p className="text-sm text-slate-400">No links created.</p>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};

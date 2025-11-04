@@ -1,0 +1,5 @@
+{
+  "name": "NetDiagram AI",
+  "description": "An intelligent network management system to visualize and manage switch and router connections, featuring smart MAC address handling and AI-powered network analysis.",
+  "requestFramePermissions": []
+}
