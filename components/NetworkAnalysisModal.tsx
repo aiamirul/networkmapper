@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getNetworkAnalysis } from '../services/geminiService';
 import { XIcon } from './icons/Icons';
@@ -29,18 +28,29 @@ export const NetworkAnalysisModal: React.FC<NetworkAnalysisModalProps> = ({ onCl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [networkState]);
 
-  // A simple markdown to HTML converter for basic formatting
   const renderMarkdown = (text: string) => {
-    return text
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-8 mb-4">$1</h1>')
-      .replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-slate-700 text-cyan-300 rounded px-1 py-0.5 font-mono text-sm">$1</code>')
-      .replace(/^\* (.*$)/gim, '<li class="ml-6 list-disc">$1</li>')
-      .replace(/\n/g, '<br />');
+    const inlineReplacements = (str: string) => str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code class="bg-slate-700 text-cyan-300 rounded px-1 py-0.5 font-mono text-sm">$1</code>');
+
+    return text.split(/(\r\n|\n){2,}/).map(block => {
+        if (!block || block.trim() === '') return '';
+        block = block.trim();
+        if (block.startsWith('# ')) return `<h1 class="text-2xl font-bold mt-8 mb-4">${inlineReplacements(block.substring(2))}</h1>`;
+        if (block.startsWith('## ')) return `<h2 class="text-xl font-bold mt-6 mb-3">${inlineReplacements(block.substring(3))}</h2>`;
+        if (block.startsWith('### ')) return `<h3 class="text-lg font-semibold mt-4 mb-2">${inlineReplacements(block.substring(4))}</h3>`;
+        if (block.startsWith('* ')) {
+            const items = block.split(/\r\n|\n/).map(item => `<li>${inlineReplacements(item.replace(/^\* /, ''))}</li>`).join('');
+            return `<ul class="list-disc pl-6 my-4 space-y-1">${items}</ul>`;
+        }
+        return `<p class="mb-4">${inlineReplacements(block).replace(/\r\n|\n/g, '<br />')}</p>`;
+    }).join('');
   };
+
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>

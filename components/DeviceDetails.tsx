@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Device, MacFormat, Connection, ConnectionType } from '../types';
 import { normalizeMac, formatMac, isValidMac } from '../utils/macFormatter';
-import { PlusIcon, TrashIcon } from './icons/Icons';
+import { PlusIcon, TrashIcon, HistoryIcon, KeyIcon, DownloadIcon, UploadIcon } from './icons/Icons';
 
 interface DeviceDetailsProps {
   device: Device;
@@ -10,7 +10,7 @@ interface DeviceDetailsProps {
   addConnection: (deviceId: string, connection: Omit<Connection, 'id'>) => void;
   updateConnection: (deviceId: string, connectionId: string, updates: Partial<Connection>) => void;
   deleteConnection: (deviceId: string, connectionId: string) => void;
-  updateDevice: (deviceId: string, updates: Partial<Omit<Device, 'id' | 'connections'>>) => void;
+  updateDevice: (deviceId: string, updates: Partial<Omit<Device, 'id' | 'connections' | 'changeLog'>>) => void;
   deleteDevice: (deviceId: string) => void;
 }
 
@@ -60,6 +60,8 @@ const ConnectionRow: React.FC<{
 
 
 export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, macFormat, addConnection, updateConnection, deleteConnection, updateDevice, deleteDevice }) => {
+    const [activeTab, setActiveTab] = useState<'connections' | 'changelog'>('connections');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleAddNewConnection = () => {
         const newConnection: Omit<Connection, 'id'> = {
@@ -72,64 +74,211 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, macFormat,
         addConnection(device.id, newConnection);
     };
 
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (loadEvent) => {
+                const base64Content = (loadEvent.target?.result as string)?.split(',')[1];
+                if (base64Content) {
+                    updateDevice(device.id, {
+                        keyFile: { name: file.name, content: base64Content }
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        if(event.target) event.target.value = '';
+    };
+
+    const handleDownloadKey = () => {
+        if (device.keyFile) {
+            const link = document.createElement("a");
+            link.href = `data:application/octet-stream;base64,${device.keyFile.content}`;
+            link.download = device.keyFile.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
+    const handleDeleteKey = () => {
+        updateDevice(device.id, { keyFile: undefined });
+    };
+
+    const handleDeleteDevice = () => {
+        if (window.confirm(`Are you sure you want to delete "${device.name}"? This action cannot be undone.`)) {
+            deleteDevice(device.id);
+        }
+    };
+
+
     return (
         <div className="space-y-6">
             <div className="bg-slate-800/50 p-6 rounded-lg">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start mb-4">
                     <div>
                         <input value={device.name} onChange={e => updateDevice(device.id, { name: e.target.value })} className="text-2xl font-bold bg-transparent focus:bg-slate-700 outline-none rounded-md px-2 py-1 -ml-2"/>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-slate-400 mt-2">
-                             <input value={device.ipAddress} onChange={e => updateDevice(device.id, { ipAddress: e.target.value })} className="bg-transparent focus:bg-slate-700 outline-none rounded-md px-2 py-1 -ml-2"/>
-                            <span>|</span>
-                            <input value={device.model} onChange={e => updateDevice(device.id, { model: e.target.value })} className="bg-transparent focus:bg-slate-700 outline-none rounded-md px-2 py-1 -ml-2"/>
-                             <span>|</span>
-                            <input value={device.iconUrl || ''} onChange={e => updateDevice(device.id, { iconUrl: e.target.value })} placeholder="Icon URL (optional)" className="bg-transparent focus:bg-slate-700 outline-none rounded-md px-2 py-1 -ml-2"/>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 text-slate-400 mt-2">
+                             <input value={device.ipAddress} onChange={e => updateDevice(device.id, { ipAddress: e.target.value })} className="bg-transparent focus:bg-slate-700 outline-none rounded-md px-2 py-1 -ml-2" placeholder="IP Address"/>
+                            <input value={device.model} onChange={e => updateDevice(device.id, { model: e.target.value })} className="bg-transparent focus:bg-slate-700 outline-none rounded-md px-2 py-1 -ml-2" placeholder="Device Model"/>
+                            <input value={device.iconUrl || ''} onChange={e => updateDevice(device.id, { iconUrl: e.target.value })} placeholder="Icon URL (optional)" className="bg-transparent focus:bg-slate-700 outline-none rounded-md px-2 py-1 -ml-2 sm:col-span-2 md:col-span-1"/>
                         </div>
                     </div>
-                    <button onClick={() => deleteDevice(device.id)} className="flex items-center gap-2 bg-red-500/10 text-red-400 px-3 py-2 rounded-md font-semibold text-sm hover:bg-red-500/20 transition-colors">
+                    <button onClick={handleDeleteDevice} className="flex items-center gap-2 bg-red-500/10 text-red-400 px-3 py-2 rounded-md font-semibold text-sm hover:bg-red-500/20 transition-colors shrink-0">
                         <TrashIcon className="w-4 h-4"/> Delete Device
                     </button>
                 </div>
             </div>
 
+            <div className="bg-slate-800/50 p-6 rounded-lg">
+                 <h3 className="text-lg font-semibold text-slate-200 mb-4 border-b border-slate-700 pb-3">Credentials & Notes</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                     <div>
+                        <label className="text-sm font-medium text-slate-400 block mb-1">Username</label>
+                        <input 
+                            type="text"
+                            value={device.username || ''}
+                            onChange={e => updateDevice(device.id, { username: e.target.value })}
+                            className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            placeholder="e.g., admin"
+                        />
+                    </div>
+                     <div>
+                        <label className="text-sm font-medium text-slate-400 block mb-1">Password</label>
+                         <input 
+                            type="password"
+                            value={device.password || ''}
+                            onChange={e => updateDevice(device.id, { password: e.target.value })}
+                            className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            placeholder="••••••••"
+                        />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-slate-400 block mb-1">Details / Notes</label>
+                        <textarea 
+                            value={device.details || ''}
+                            onChange={e => updateDevice(device.id, { details: e.target.value })}
+                            rows={4}
+                            className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            placeholder="Configuration details, physical location, etc."
+                        />
+                    </div>
+                </div>
+            </div>
+
+             <div className="bg-slate-800/50 p-6 rounded-lg">
+                <h3 className="text-lg font-semibold text-slate-200 mb-4">Device Key / Config File</h3>
+                {device.keyFile ? (
+                    <div className="flex items-center justify-between bg-slate-700/50 rounded-md p-3">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <KeyIcon className="w-5 h-5 text-cyan-400 shrink-0" />
+                            <span className="font-mono text-slate-300 truncate" title={device.keyFile.name}>{device.keyFile.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={handleDownloadKey} className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-full" title="Download Key">
+                                <DownloadIcon className="w-5 h-5" />
+                            </button>
+                            <button onClick={handleDeleteKey} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-full" title="Delete Key">
+                                <TrashIcon className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-center p-4 border-2 border-dashed border-slate-700 rounded-lg flex flex-col items-center">
+                        <p className="text-slate-500 mb-3">No key or config file attached.</p>
+                        <button 
+                            onClick={handleUploadClick} 
+                            className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-md font-semibold text-sm transition-colors"
+                        >
+                            <UploadIcon className="w-5 h-5"/> Upload File
+                        </button>
+                    </div>
+                )}
+                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+            </div>
+
             <div className="bg-slate-800/50 rounded-lg overflow-hidden">
                 <div className="p-4 flex justify-between items-center border-b border-slate-700/50">
-                    <h3 className="text-lg font-semibold">Connections</h3>
-                    <button onClick={handleAddNewConnection} className="flex items-center gap-2 bg-cyan-500/10 text-cyan-400 px-3 py-2 rounded-md font-semibold text-sm hover:bg-cyan-500/20 transition-colors">
-                        <PlusIcon className="w-5 h-5"/> Add Connection
-                    </button>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-900/50 text-slate-400 uppercase tracking-wider">
-                            <tr>
-                                <th className="p-3">Port</th>
-                                <th className="p-3">Type</th>
-                                <th className="p-3">IP Address</th>
-                                <th className="p-3">MAC Address</th>
-                                <th className="p-3">Hostname</th>
-                                <th className="p-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {device.connections.map(conn => (
-                                <ConnectionRow
-                                    key={conn.id}
-                                    connection={conn}
-                                    macFormat={macFormat}
-                                    onDelete={() => deleteConnection(device.id, conn.id)}
-                                    onUpdate={(updates) => updateConnection(device.id, conn.id, updates)}
-                                />
-                            ))}
-                        </tbody>
-                    </table>
-                     {device.connections.length === 0 && (
-                        <div className="text-center p-8 text-slate-500">
-                            <p>No connections found for this device.</p>
-                            <p>Click "Add Connection" to get started.</p>
-                        </div>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setActiveTab('connections')} className={`px-3 py-2 rounded-md text-sm font-semibold flex items-center gap-2 ${activeTab === 'connections' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:bg-slate-700/50'}`}>
+                            Connections
+                        </button>
+                        <button onClick={() => setActiveTab('changelog')} className={`px-3 py-2 rounded-md text-sm font-semibold flex items-center gap-2 ${activeTab === 'changelog' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:bg-slate-700/50'}`}>
+                            <HistoryIcon className="w-5 h-5" /> Change Log
+                        </button>
+                    </div>
+
+                    {activeTab === 'connections' && (
+                        <button onClick={handleAddNewConnection} className="flex items-center gap-2 bg-cyan-500/10 text-cyan-400 px-3 py-2 rounded-md font-semibold text-sm hover:bg-cyan-500/20 transition-colors">
+                            <PlusIcon className="w-5 h-5"/> Add Connection
+                        </button>
                     )}
                 </div>
+
+                {activeTab === 'connections' && (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-900/50 text-slate-400 uppercase tracking-wider">
+                                <tr>
+                                    <th className="p-3">Port</th>
+                                    <th className="p-3">Type</th>
+                                    <th className="p-3">IP Address</th>
+                                    <th className="p-3">MAC Address</th>
+                                    <th className="p-3">Hostname</th>
+                                    <th className="p-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {device.connections.map(conn => (
+                                    <ConnectionRow
+                                        key={conn.id}
+                                        connection={conn}
+                                        macFormat={macFormat}
+                                        onDelete={() => deleteConnection(device.id, conn.id)}
+                                        onUpdate={(updates) => updateConnection(device.id, conn.id, updates)}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                        {device.connections.length === 0 && (
+                            <div className="text-center p-8 text-slate-500">
+                                <p>No connections found for this device.</p>
+                                <p>Click "Add Connection" to get started.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'changelog' && (
+                     <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                             <thead className="bg-slate-900/50 text-slate-400 uppercase tracking-wider">
+                                <tr>
+                                    <th className="p-3 w-1/3">Timestamp</th>
+                                    <th className="p-3 w-2/3">Change</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {device.changeLog?.map(log => (
+                                    <tr key={log.id} className="border-b border-slate-700/50">
+                                        <td className="p-3 text-slate-400">{new Date(log.timestamp).toLocaleString()}</td>
+                                        <td className="p-3">{log.change}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {(!device.changeLog || device.changeLog.length === 0) && (
+                            <div className="text-center p-8 text-slate-500">
+                                <p>No change history for this device.</p>
+                            </div>
+                        )}
+                     </div>
+                )}
             </div>
         </div>
     );

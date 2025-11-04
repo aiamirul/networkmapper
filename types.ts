@@ -30,14 +30,30 @@ export interface Connection {
   hostname: string;
 }
 
+export interface ChangeLogEntry {
+    id: string;
+    timestamp: string; // ISO 8601 format
+    change: string;
+}
+
+export interface KeyFile {
+    name: string;
+    content: string; // Base64 encoded content
+}
+
 export interface Device {
-  id: string;
+  id:string;
   name: string;
   type: DeviceType;
   ipAddress: string;
   model: string;
   connections: Connection[];
   iconUrl?: string; // Optional URL for a custom icon
+  username?: string;
+  password?: string;
+  details?: string;
+  changeLog?: ChangeLogEntry[];
+  keyFile?: KeyFile;
 }
 
 export interface TopologyLink {
@@ -49,4 +65,20 @@ export interface TopologyLink {
 export enum View {
     DIAGRAM = 'DIAGRAM',
     DEVICE_DETAILS = 'DEVICE_DETAILS'
+}
+
+export interface EncryptedConfig {
+  salt: string;
+  data: string; // Base64 encoded encrypted string (IV + Ciphertext) for local files
+}
+
+export interface RemoteEncryptedPayload {
+  salt: string;
+  nonce: string; // base64
+  ciphertext: string; // base64
+}
+
+export interface RemoteConfig {
+  date: string;
+  data: RemoteEncryptedPayload;
 }

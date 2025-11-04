@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Device, MacFormat, View, TopologyLink } from '../types';
+import { Device, MacFormat, View, TopologyLink, Connection } from '../types';
 import { NetworkDiagram } from './NetworkDiagram';
 import { DeviceDetails } from './DeviceDetails';
 
@@ -8,10 +7,10 @@ interface MainContentProps {
   view: View;
   selectedDevice: Device | null;
   macFormat: MacFormat;
-  addConnection: (deviceId: string, connection: any) => void;
-  updateConnection: (deviceId: string, connectionId: string, updates: any) => void;
+  addConnection: (deviceId: string, connection: Omit<Connection, 'id'>) => void;
+  updateConnection: (deviceId: string, connectionId: string, updates: Partial<Connection>) => void;
   deleteConnection: (deviceId: string, connectionId: string) => void;
-  updateDevice: (deviceId: string, updates: any) => void;
+  updateDevice: (deviceId: string, updates: Partial<Omit<Device, 'id' | 'connections' | 'changeLog'>>) => void;
   deleteDevice: (deviceId: string) => void;
   devices: Device[];
   topology: TopologyLink[];

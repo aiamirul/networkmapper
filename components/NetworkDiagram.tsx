@@ -1,7 +1,6 @@
-
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink } from '../types';
-import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon } from './icons/Icons';
+import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon } from './icons/Icons';
 import * as d3 from 'd3';
 
 // Fix: Explicitly add d3.SimulationNodeDatum properties to the Node interface 
@@ -28,6 +27,16 @@ interface NetworkDiagramProps {
     deleteTopologyLink: (linkId: string) => void;
 }
 
+const DEVICE_TYPE_COLORS: Record<DeviceType, string> = {
+    [DeviceType.SWITCH]: '#3b82f6', // blue-500
+    [DeviceType.ROUTER]: '#22c55e', // green-500
+    [DeviceType.PC]: '#8b5cf6', // violet-500
+    [DeviceType.SERVER]: '#f97316', // orange-500
+    [DeviceType.AP]: '#eab308', // yellow-500
+    [DeviceType.PRINTER]: '#64748b', // slate-500
+    [DeviceType.OTHER]: '#ec4899', // pink-500
+};
+
 const getDeviceIconSvg = (type: DeviceType): string => {
     // Returns a group with a transformed path for centering/scaling
     const size = 24; // viewBox size
@@ -42,7 +51,7 @@ const getDeviceIconSvg = (type: DeviceType): string => {
         [DeviceType.SERVER]: `<path d="M3.375 6.375h17.25M6.375 9.375h1.5m-1.5 6h1.5m1.5-6h1.5m4.5 0h1.5m-9 9h9m-12-15a2 2 0 0 1 2-2h13.25a2 2 0 0 1 2 2v13.25a2 2 0 0 1-2 2H5.375a2 2 0 0 1-2-2V4.375Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
         [DeviceType.AP]: `<path d="M12 5c3.866 0 7 1.79 7 4m-14 0c0-2.21 3.134-4 7-4m-9 8h2m14 0h2m-10-4a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
         [DeviceType.PRINTER]: `<path d="M8.625 15.375v4.5m6.75-4.5v4.5m-10.5-9h14.25v-6a1 1 0 0 0-1-1H6.375a1 1 0 0 0-1 1v6Zm0 0h14.25m-14.25 0a2 2 0 0 0-2 2v4.5a1 1 0 0 0 1 1h16.25a1 1 0 0 0 1-1v-4.5a2 2 0 0 0-2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
-        [DeviceType.OTHER]: `<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+        [DeviceType.OTHER]: `<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
     };
 
     const path = paths[type] || paths[DeviceType.SWITCH];
@@ -53,6 +62,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
     const svgRef = useRef<SVGSVGElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [linking, setLinking] = useState<string | null>(null);
+    const [topologySearchQuery, setTopologySearchQuery] = useState('');
 
     const nodes = useMemo<Node[]>(() => devices.map(device => ({ id: device.id, device })), [devices]);
     const links = useMemo<Link[]>(() => topology.map(link => ({ id: link.id, source: link.from, target: link.to })), [topology]);
@@ -86,13 +96,36 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
         
         const g = svg.append("g");
 
+        const linkedDeviceIds = new Set(topology.flatMap(link => [link.from, link.to]));
+
+        const isSearched = (d: Node) => {
+            if (!topologySearchQuery) return false;
+            return d.device.name.toLowerCase().includes(topologySearchQuery.toLowerCase()) || d.device.ipAddress.toLowerCase().includes(topologySearchQuery.toLowerCase());
+        };
+        
+        const searchedIds = new Set(nodes.filter(isSearched).map(n => n.id));
+
+
         const link = g.append("g")
-            .attr("stroke", "#475569")
-            .attr("stroke-opacity", 0.6)
             .selectAll("line")
             .data(links)
             .join("line")
-            .attr("stroke-width", 2.5)
+            .attr("stroke", d => {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                return topologySearchQuery && (searchedIds.has(sourceId) || searchedIds.has(targetId)) ? '#06b6d4' : '#475569';
+            })
+            .attr("stroke-opacity", d => {
+                 const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                if (!topologySearchQuery) return 0.6;
+                return searchedIds.has(sourceId) || searchedIds.has(targetId) ? 0.9 : 0.1;
+            })
+            .attr("stroke-width", d => {
+                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                return topologySearchQuery && (searchedIds.has(sourceId) || searchedIds.has(targetId)) ? 4 : 2.5;
+            })
             .attr("data-link-id", d => d.id);
             
         const node = g.append("g")
@@ -100,16 +133,24 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
             .data(nodes)
             .join("g")
             .attr("class", "cursor-pointer")
-            .call(d3.drag<any, Node>()
+            .call(d3.drag<SVGGElement, Node>()
                 .on("start", dragstarted)
                 .on("drag", dragged)
                 .on("end", dragended));
 
         node.append("circle")
             .attr("r", 30)
-            .attr("fill", "#1e293b")
-            .attr("stroke", "#475569")
-            .attr("stroke-width", 2);
+            .attr("fill", d => DEVICE_TYPE_COLORS[d.device.type] || '#64748b')
+            .attr("fill-opacity", d => {
+                if(topologySearchQuery) return isSearched(d) ? 0.4 : 0.1;
+                return linkedDeviceIds.has(d.id) ? 0.4 : 0.2;
+            })
+            .attr("stroke", d => isSearched(d) ? '#06b6d4' : DEVICE_TYPE_COLORS[d.device.type] || '#64748b')
+            .attr("stroke-width", d => isSearched(d) ? 4 : 2)
+            .attr("stroke-opacity", d => {
+                if(topologySearchQuery) return isSearched(d) ? 1 : 0.2;
+                return linkedDeviceIds.has(d.id) ? 1 : 0.6
+            });
 
         // Icon Handling
         const nodeIcon = node.append("g").attr("class", "node-icon");
@@ -122,24 +163,38 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
             .attr("height", 40)
             .attr("width", 40)
             .attr("clip-path", "circle(20px)")
+            .style("opacity", d => {
+                if(topologySearchQuery) return isSearched(d) ? 1 : 0.3;
+                return linkedDeviceIds.has(d.id) ? 1 : 0.7;
+            })
             .on("error", function(event, d) {
                 const parent = d3.select(this.parentNode);
                 d3.select(this).remove();
                 parent.append("g")
                     .html(getDeviceIconSvg(d.device.type))
-                    .attr("color", "#e2e8f0");
+                    .attr("color", "#e2e8f0")
+                    .style("opacity", d => {
+                        if(topologySearchQuery) return isSearched(d) ? 1 : 0.3;
+                        return linkedDeviceIds.has(d.id) ? 1 : 0.7;
+                    });
             });
         
         nodeIcon.filter(d => !d.device.iconUrl)
             .append("g")
             .html(d => getDeviceIconSvg(d.device.type))
-            .attr("color", "#e2e8f0");
+            .attr("color", "#e2e8f0")
+            .style("opacity", d => {
+                if(topologySearchQuery) return isSearched(d) ? 1 : 0.3;
+                return linkedDeviceIds.has(d.id) ? 1 : 0.7;
+            });
 
         node.append("text")
             .attr("y", 45)
             .attr("text-anchor", "middle")
-            .attr("fill", "#94a3b8")
+            .attr("fill", d => isSearched(d) ? "#67e8f9" : "#94a3b8")
             .attr("font-size", "12px")
+            .attr("font-weight", d => isSearched(d) ? "bold" : "normal")
+            .style("opacity", d => topologySearchQuery && !isSearched(d) ? 0.3 : 1)
             .text(d => d.device.name);
         
         node.on("click", (event, d) => {
@@ -176,7 +231,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
             d.fy = null;
         }
 
-    }, [nodes, links, dimensions, linking, addTopologyLink]);
+    }, [nodes, links, dimensions, linking, addTopologyLink, topologySearchQuery]);
 
     const handleNodeLinkClick = (nodeId: string) => {
         setLinking(nodeId);
@@ -194,9 +249,23 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
 
     return (
         <div className="h-full w-full bg-slate-800/50 rounded-lg flex flex-col relative">
-            <h3 className="text-xl font-semibold p-4 border-b border-slate-700/50 text-slate-200">Network Topology</h3>
+            <div className="p-4 border-b border-slate-700/50 flex justify-between items-center gap-4">
+                <h3 className="text-xl font-semibold text-slate-200 shrink-0">Network Topology</h3>
+                <div className="relative w-full max-w-xs">
+                    <input
+                      type="text"
+                      placeholder="Search topology..."
+                      value={topologySearchQuery}
+                      onChange={(e) => setTopologySearchQuery(e.target.value)}
+                      className="w-full bg-slate-700/50 border border-slate-600 rounded-md pl-10 pr-4 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <SearchIcon className="w-5 h-5 text-slate-400" />
+                    </div>
+                </div>
+            </div>
             {linking && (
-                <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-cyan-900/80 backdrop-blur-sm text-cyan-200 px-4 py-2 rounded-lg z-20 flex items-center gap-2">
+                <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-cyan-900/80 backdrop-blur-sm text-cyan-200 px-4 py-2 rounded-lg z-20 flex items-center gap-2">
                     <LinkIcon className="w-5 h-5 animate-pulse" />
                     <span>Select a device to link to...</span>
                     <button onClick={() => setLinking(null)} className="p-1 hover:bg-cyan-700 rounded-full">
