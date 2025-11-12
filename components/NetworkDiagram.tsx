@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink } from '../types';
-import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon } from './icons/Icons';
+import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PlusIcon, MinusIcon, ZoomResetIcon } from './icons/Icons';
 import * as d3 from 'd3';
 
 // Fix: Explicitly add d3.SimulationNodeDatum properties to the Node interface 
@@ -60,6 +60,8 @@ const getDeviceIconSvg = (type: DeviceType): string => {
 
 export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topology, addTopologyLink, deleteTopologyLink }) => {
     const svgRef = useRef<SVGSVGElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>();
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [linking, setLinking] = useState<string | null>(null);
     const [topologySearchQuery, setTopologySearchQuery] = useState('');
@@ -75,8 +77,8 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
             }
         });
 
-        if (svgRef.current?.parentElement) {
-            resizeObserver.observe(svgRef.current.parentElement);
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
         }
 
         return () => resizeObserver.disconnect();
@@ -231,6 +233,18 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
             d.fy = null;
         }
 
+        const zoomed = (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+            g.attr('transform', event.transform.toString());
+        };
+
+        const zoom = d3.zoom<SVGSVGElement, unknown>()
+            .scaleExtent([0.1, 8])
+            .on('zoom', zoomed);
+        
+        zoomRef.current = zoom;
+        svg.call(zoom);
+
+
     }, [nodes, links, dimensions, linking, addTopologyLink, topologySearchQuery]);
 
     const handleNodeLinkClick = (nodeId: string) => {
@@ -245,6 +259,24 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
         [DeviceType.AP]: APIcon,
         [DeviceType.PRINTER]: PrinterIcon,
         [DeviceType.OTHER]: SettingsIcon,
+    };
+
+    const handleZoomIn = () => {
+        if (svgRef.current && zoomRef.current) {
+            d3.select(svgRef.current).transition().duration(200).call(zoomRef.current.scaleBy, 1.2);
+        }
+    };
+
+    const handleZoomOut = () => {
+        if (svgRef.current && zoomRef.current) {
+            d3.select(svgRef.current).transition().duration(200).call(zoomRef.current.scaleBy, 0.8);
+        }
+    };
+
+    const handleZoomReset = () => {
+        if (svgRef.current && zoomRef.current) {
+            d3.select(svgRef.current).transition().duration(200).call(zoomRef.current.transform, d3.zoomIdentity);
+        }
     };
 
     return (
@@ -273,8 +305,19 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
                     </button>
                 </div>
             )}
-            <div className="flex-grow relative p-4" ref={el => { if (el) svgRef.current = el.querySelector('svg'); }}>
-                <svg ref={svgRef} width={dimensions.width - 32} height={dimensions.height - 32} className="absolute"></svg>
+            <div className="flex-grow relative p-4" ref={containerRef}>
+                <svg ref={svgRef} width={dimensions.width} height={dimensions.height}></svg>
+                <div className="absolute bottom-4 right-4 bg-slate-900/50 backdrop-blur-sm rounded-lg border border-slate-700/50 flex flex-col z-10">
+                    <button onClick={handleZoomIn} className="p-2 text-slate-300 hover:bg-slate-700 rounded-t-lg transition-colors" title="Zoom In">
+                        <PlusIcon className="w-5 h-5" />
+                    </button>
+                    <button onClick={handleZoomOut} className="p-2 text-slate-300 hover:bg-slate-700 transition-colors border-y border-slate-700/50" title="Zoom Out">
+                        <MinusIcon className="w-5 h-5" />
+                    </button>
+                    <button onClick={handleZoomReset} className="p-2 text-slate-300 hover:bg-slate-700 rounded-b-lg transition-colors" title="Reset Zoom">
+                        <ZoomResetIcon className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
             <div className="p-4 border-t border-slate-700/50 flex flex-wrap gap-4">
                 <div>
