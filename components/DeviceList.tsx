@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Device, DeviceType, TopologyLink, View, Room, Rack } from '../types';
+import { Device, DeviceType, TopologyLink, View, Room, Rack, MacFormat } from '../types';
 import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon, TrashIcon, ViewGridIcon, CloudServerIcon } from './icons/Icons';
 import { ExportEncryptionModal } from './ExportEncryptionModal';
 import { ImportDecryptionModal } from './ImportDecryptionModal';
+import { formatMac } from '../utils/macFormatter';
 
 interface DeviceListProps {
   devices: Device[];
@@ -78,6 +79,64 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms
     const link = document.createElement("a");
     link.href = jsonString;
     link.download = "netdiagram-ai-config.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setActionsMenuOpen(false);
+  };
+
+  const handleExportCsvSummary = () => {
+    const headers = [
+        'ID', 'Name', 'Type', 'IP Address', 'Model', 'U Size', 
+        'Room', 'Rack', 'U Position', 'Username', 'Key File', 
+        'Details', 'Connections', 'Last Change Timestamp', 'Last Change'
+    ];
+
+    const escapeCsvCell = (cell: any): string => {
+        const stringCell = String(cell ?? '').trim();
+        if (/[",\r\n]/.test(stringCell)) {
+            return `"${stringCell.replace(/"/g, '""')}"`;
+        }
+        return stringCell;
+    };
+
+    const rows = devices.map(device => {
+        const roomName = device.placement ? rooms.find(r => r.id === device.placement.roomId)?.name || '' : '';
+        const rackName = device.placement ? racks.find(r => r.id === device.placement.rackId)?.name || '' : '';
+        const uPosition = device.placement ? device.placement.uPosition : '';
+
+        const connectionsSummary = device.connections.map(c => 
+            `Port ${c.port} (${c.type}): ${c.hostname} [${c.ipAddress}] [${formatMac(c.macAddress, MacFormat.COLON)}]`
+        ).join('; ');
+
+        const lastChange = device.changeLog && device.changeLog.length > 0 ? device.changeLog[0] : null;
+
+        const rowData = [
+            device.id,
+            device.name,
+            device.type,
+            device.ipAddress,
+            device.model,
+            device.uSize,
+            roomName,
+            rackName,
+            uPosition,
+            device.username || '',
+            device.keyFile?.name || '',
+            device.details || '',
+            connectionsSummary,
+            lastChange ? new Date(lastChange.timestamp).toLocaleString() : '',
+            lastChange ? lastChange.change : ''
+        ];
+        return rowData.map(escapeCsvCell).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "netdiagram-ai-summary.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -159,6 +218,12 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms
                               <button onClick={() => { setExportEncryptModalOpen(true); setActionsMenuOpen(false); }} className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-600">
                                   <LockIcon className="w-5 h-5" />
                                   <span>Export Encrypted</span>
+                              </button>
+                          </li>
+                          <li>
+                              <button onClick={handleExportCsvSummary} className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-600">
+                                  <DownloadIcon className="w-5 h-5" />
+                                  <span>Export to CSV Summary</span>
                               </button>
                           </li>
                           <hr className="border-slate-600 my-1" />
