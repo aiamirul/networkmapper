@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useCallback } from 'react';
 import { Device, Room, Rack, DevicePlacement, DeviceType } from '../types';
-import { PlusIcon, TrashIcon, ServerIcon, SwitchIcon, RouterIcon, PCIcon, APIcon, PrinterIcon, SettingsIcon, XIcon, CloudServerIcon } from './icons/Icons';
+import { PlusIcon, TrashIcon, ServerIcon, SwitchIcon, RouterIcon, PCIcon, APIcon, PrinterIcon, SettingsIcon, CloudServerIcon, ChevronDownIcon, ChevronUpIcon } from './icons/Icons';
 import { ConfirmationModal } from './ConfirmationModal';
 
 interface PhysicalViewProps {
@@ -16,24 +17,11 @@ interface PhysicalViewProps {
     updateDevicePlacement: (deviceId: string, placement: DevicePlacement | undefined) => void;
 }
 
-const UnplacedDevice: React.FC<{ device: Device, onClick: () => void, isSlotSelected: boolean }> = ({ device, onClick, isSlotSelected }) => {
-    const baseClasses = "p-2 bg-slate-700 rounded-md flex items-center gap-2";
-    const interactionClasses = isSlotSelected 
-        ? "cursor-pointer hover:bg-slate-600" 
-        : "cursor-not-allowed opacity-60";
-    
-    return (
-        <div 
-            onClick={onClick}
-            title={isSlotSelected ? `Place ${device.name} in selected slot (top U)` : 'Select a slot in a rack to place this device'}
-            className={`${baseClasses} ${interactionClasses}`}
-        >
-            <DeviceTypeIcon type={device.type} className="w-4 h-4 text-slate-400 shrink-0"/>
-            <span className="text-sm truncate">{device.name} {device.uSize > 0 && `(${device.uSize}U)`}</span>
-        </div>
-    );
+type DraggedItem = {
+    id: string;
+    uSize: number;
+    isPlaced: boolean;
 };
-
 
 const DeviceTypeIcon = ({ type, className }: { type: DeviceType, className?: string }) => {
   const baseClass = "w-5 h-5 text-slate-300 shrink-0";
@@ -51,6 +39,79 @@ const DeviceTypeIcon = ({ type, className }: { type: DeviceType, className?: str
   }
 };
 
+const DraggableDevice: React.FC<{device: Device, onDragStart: (e: React.DragEvent, item: DraggedItem) => void}> = ({ device, onDragStart }) => (
+    <div
+        draggable
+        onDragStart={(e) => onDragStart(e, { id: device.id, uSize: device.uSize, isPlaced: !!device.placement })}
+        className={`p-2 bg-slate-700 rounded-md flex items-center gap-2 cursor-grab active:cursor-grabbing ${device.uSize === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+        title={device.uSize === 0 ? "Cloud devices cannot be placed in racks." : device.name}
+    >
+        <DeviceTypeIcon type={device.type} className="w-4 h-4 text-slate-400 shrink-0"/>
+        <span className="text-sm truncate">{device.name} {device.uSize > 0 && `(${device.uSize}U)`}</span>
+    </div>
+);
+
+const PlacedDevice: React.FC<{
+    device: Device;
+    rackUHeight: number;
+    onDragStart: (e: React.DragEvent) => void;
+}> = ({ device, rackUHeight, onDragStart }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    const devicePlacement = device.placement!;
+
+    const style: React.CSSProperties = {
+        top: `${(rackUHeight - (devicePlacement.uPosition + device.uSize - 1)) * 20}px`,
+        height: isExpanded ? 'auto' : `${device.uSize * 20}px`,
+        zIndex: isExpanded ? 10 : 1,
+    };
+
+    const isCompact = device.uSize * 20 < 40; // True for 1U devices
+
+    const handleToggle = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(prev => !prev);
+    };
+
+    return (
+        <div
+            draggable
+            onDragStart={onDragStart}
+            onDragEnd={() => { 
+                if(isExpanded) setIsExpanded(false);
+            }}
+            className="absolute w-full bg-cyan-800 rounded-md text-white text-xs p-1 flex flex-col overflow-hidden cursor-grab active:cursor-grabbing border-2 border-cyan-600 transition-all duration-200"
+            style={style}
+            title={device.name}
+        >
+            <div className="flex items-center gap-2 flex-shrink-0">
+                <DeviceTypeIcon type={device.type} className="w-4 h-4 text-cyan-300 shrink-0"/>
+                <div className={`flex-grow truncate ${isCompact ? 'flex items-center gap-2' : ''}`}>
+                    <p className="font-semibold truncate">{device.name}</p>
+                    {!isCompact && <p className="text-cyan-400 text-[10px] truncate">{device.ipAddress}</p>}
+                </div>
+                {isCompact && <p className="text-cyan-400 text-[10px] truncate shrink-0">{device.ipAddress}</p>}
+
+                {device.details && (
+                    <button 
+                        onClick={handleToggle}
+                        onMouseDown={e => e.stopPropagation()} // Prevent drag from starting on button click
+                        className="p-1 rounded-full hover:bg-cyan-700 shrink-0"
+                    >
+                        {isExpanded ? <ChevronUpIcon className="w-4 h-4"/> : <ChevronDownIcon className="w-4 h-4"/>}
+                    </button>
+                )}
+            </div>
+            {isExpanded && device.details && (
+                <div className="mt-2 p-2 bg-slate-900/50 rounded text-slate-300 text-xs whitespace-pre-wrap">
+                    <h5 className="font-bold mb-1">Details:</h5>
+                    {device.details}
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 export const PhysicalView: React.FC<PhysicalViewProps> = ({ devices, rooms, racks, addRoom, updateRoom, deleteRoom, addRack, updateRack, deleteRack, updateDevicePlacement }) => {
     const [newRoomName, setNewRoomName] = useState('');
@@ -58,82 +119,72 @@ export const PhysicalView: React.FC<PhysicalViewProps> = ({ devices, rooms, rack
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingValue, setEditingValue] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<{type: 'room' | 'rack', id: string, name: string} | null>(null);
-    const [selectedSlot, setSelectedSlot] = useState<{ roomId: string, rackId: string, uPosition: number } | null>(null);
+    
+    const [draggedItem, setDraggedItem] = useState<DraggedItem | null>(null);
+    const [dragOverInfo, setDragOverInfo] = useState<{rackId: string, uPosition: number} | null>(null);
+    const [isOverUnplace, setIsOverUnplace] = useState(false);
 
     const unplacedDevices = useMemo(() => devices.filter(d => !d.placement), [devices]);
     
-    const handleSlotClick = (roomId: string, rackId: string, uPosition: number) => {
-        if (selectedSlot?.rackId === rackId && selectedSlot.uPosition === uPosition) {
-            setSelectedSlot(null); // Deselect
-        } else {
-            setSelectedSlot({ roomId, rackId, uPosition });
-        }
-    };
-
-    const handlePlaceDevice = (deviceId: string) => {
-        if (!selectedSlot) return;
-
-        const { rackId, uPosition: uSlot, roomId } = selectedSlot;
-        const deviceToPlace = devices.find(d => d.id === deviceId);
-        if (!deviceToPlace || deviceToPlace.uSize === 0) return;
-
-        // uPosition is the bottom-most U. User clicks the top-most U.
-        const targetUPosition = Math.max(1, uSlot - deviceToPlace.uSize + 1);
-
-        const devicesToPush = devices
-            .filter(d =>
-                d.id !== deviceId &&
-                d.placement?.rackId === rackId &&
-                d.placement.uPosition >= targetUPosition
-            )
-            .sort((a, b) => b.placement!.uPosition - a.placement!.uPosition); // Process top-down
-
-        devicesToPush.forEach(device => {
-            const currentPosition = device.placement!.uPosition;
-            updateDevicePlacement(device.id, { ...device.placement!, uPosition: currentPosition + deviceToPlace.uSize });
+    const getOccupiedSlots = useCallback((rackId: string, excludeDeviceId?: string): Set<number> => {
+        const occupied = new Set<number>();
+        devices.forEach(d => {
+            if (d.placement?.rackId === rackId && d.id !== excludeDeviceId) {
+                for (let i = 0; i < d.uSize; i++) {
+                    occupied.add(d.placement.uPosition + i);
+                }
+            }
         });
+        return occupied;
+    }, [devices]);
 
-        updateDevicePlacement(deviceId, { roomId, rackId, uPosition: targetUPosition });
-        setSelectedSlot(null);
+    const handleDragStart = (e: React.DragEvent, item: DraggedItem) => {
+        if(item.uSize === 0) {
+            e.preventDefault();
+            return;
+        }
+        setDraggedItem(item);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', item.id); // Necessary for Firefox
     };
-    
-    const handleRemoveDevice = (deviceId: string) => {
-        const deviceToRemove = devices.find(d => d.id === deviceId);
-        if (!deviceToRemove || !deviceToRemove.placement) return;
+
+    const handleDragEnd = () => {
+        setDraggedItem(null);
+        setDragOverInfo(null);
+        setIsOverUnplace(false);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+    const handleDragEnterSlot = (rackId: string, uPosition: number) => draggedItem && setDragOverInfo({ rackId, uPosition });
+    const handleDragLeaveRack = () => setDragOverInfo(null);
+
+    const handleDropOnRack = (e: React.DragEvent, roomId: string, rackId: string, uPosition: number) => {
+        e.preventDefault();
+        if (!draggedItem) return;
+
+        const targetUPosition = Math.max(1, uPosition - draggedItem.uSize + 1);
+        const occupiedSlots = getOccupiedSlots(rackId, draggedItem.isPlaced ? draggedItem.id : undefined);
+        let isConflict = false;
+        for (let i = 0; i < draggedItem.uSize; i++) {
+            if (occupiedSlots.has(targetUPosition + i)) {
+                isConflict = true;
+                break;
+            }
+        }
         
-        const { rackId, uPosition } = deviceToRemove.placement;
-
-        updateDevicePlacement(deviceId, undefined);
-
-        const devicesToShiftDown = devices
-            .filter(d =>
-                d.id !== deviceId &&
-                d.placement?.rackId === rackId &&
-                d.placement.uPosition > uPosition
-            )
-            .sort((a, b) => a.placement!.uPosition - b.placement!.uPosition); // Process bottom-up
-
-        devicesToShiftDown.forEach(device => {
-            const newPos = device.placement!.uPosition - deviceToRemove.uSize;
-            updateDevicePlacement(device.id, { ...device.placement!, uPosition: newPos });
-        });
+        if (!isConflict) {
+            updateDevicePlacement(draggedItem.id, { roomId, rackId, uPosition: targetUPosition });
+        }
+        
+        handleDragEnd();
     };
 
-    const handleAddRoom = (e: React.FormEvent) => {
+    const handleDropOnUnplace = (e: React.DragEvent) => {
         e.preventDefault();
-        if (newRoomName.trim()) {
-            addRoom(newRoomName.trim());
-            setNewRoomName('');
+        if(draggedItem?.isPlaced) {
+            updateDevicePlacement(draggedItem.id, undefined);
         }
-    };
-
-    const handleAddRack = (e: React.FormEvent, roomId: string) => {
-        e.preventDefault();
-        const form = newRackForms[roomId];
-        if (form && form.name.trim() && form.uHeight > 0) {
-            addRack({ name: form.name.trim(), uHeight: form.uHeight, roomId });
-            setNewRackForms(prev => ({...prev, [roomId]: {name: '', uHeight: 42}}));
-        }
+        handleDragEnd();
     };
     
     const startEditing = (id: string, currentValue: string) => {
@@ -153,22 +204,48 @@ export const PhysicalView: React.FC<PhysicalViewProps> = ({ devices, rooms, rack
         setEditingValue('');
     };
     
+    const handleAddRoom = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newRoomName.trim()) {
+            addRoom(newRoomName.trim());
+            setNewRoomName('');
+        }
+    };
+
+    const handleAddRack = (e: React.FormEvent, roomId: string) => {
+        e.preventDefault();
+        const form = newRackForms[roomId];
+        if (form && form.name.trim() && form.uHeight > 0) {
+            addRack({ name: form.name.trim(), uHeight: form.uHeight, roomId });
+            setNewRackForms(prev => ({...prev, [roomId]: {name: '', uHeight: 42}}));
+        }
+    };
+    
     return (
         <>
-        <div className="h-full flex gap-6">
+        <div className="h-full flex gap-6" onDragEnd={handleDragEnd}>
             <aside className="w-64 bg-slate-800/50 p-4 rounded-lg flex flex-col shrink-0">
-                <h3 className="text-lg font-semibold mb-4">Unplaced Devices</h3>
-                 { !selectedSlot && <p className="text-xs text-slate-500 mb-2 italic">Select a rack slot to enable placement.</p> }
+                <h3 className="text-lg font-semibold mb-2">Unplaced Devices</h3>
+                <p className="text-xs text-slate-500 mb-4 italic">Drag devices onto a rack to place them.</p>
                 <div className="space-y-2 overflow-y-auto flex-grow">
                     {unplacedDevices.length > 0 ? (
-                        unplacedDevices.map(d => <UnplacedDevice key={d.id} device={d} onClick={() => handlePlaceDevice(d.id)} isSlotSelected={!!selectedSlot} />)
+                        unplacedDevices.map(d => <DraggableDevice key={d.id} device={d} onDragStart={handleDragStart} />)
                     ) : (
                         <p className="text-sm text-slate-500 text-center pt-4">All devices are placed.</p>
                     )}
                 </div>
+                <div
+                  onDragOver={handleDragOver}
+                  onDrop={handleDropOnUnplace}
+                  onDragEnter={() => draggedItem?.isPlaced && setIsOverUnplace(true)}
+                  onDragLeave={() => setIsOverUnplace(false)}
+                  className={`mt-4 p-4 border-2 border-dashed rounded-lg text-center transition-colors ${isOverUnplace ? 'border-cyan-500 bg-cyan-500/10' : 'border-slate-700'}`}
+                >
+                    <p className={`text-sm transition-colors ${isOverUnplace ? 'text-cyan-400' : 'text-slate-500'}`}>Drop here to un-place device</p>
+                </div>
             </aside>
 
-            <main className="flex-grow space-y-8 overflow-y-auto">
+            <main className="flex-grow space-y-8 overflow-y-auto pr-2">
                  {rooms.map(room => (
                     <section key={room.id} className="bg-slate-800/50 p-6 rounded-lg">
                         <div className="flex justify-between items-center mb-4">
@@ -182,8 +259,34 @@ export const PhysicalView: React.FC<PhysicalViewProps> = ({ devices, rooms, rack
                         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                             {racks.filter(r => r.roomId === room.id).map(rack => {
                                 const devicesInRack = devices.filter(d => d.placement?.rackId === rack.id);
+                                
+                                const isRackDraggedOver = draggedItem && dragOverInfo?.rackId === rack.id;
+                                let dragHighlightInfo = null;
+
+                                if (isRackDraggedOver) {
+                                    const uPosition = dragOverInfo!.uPosition;
+                                    const uSize = draggedItem!.uSize;
+                                    const targetUPosition = Math.max(1, uPosition - uSize + 1);
+                                    const occupiedSlots = getOccupiedSlots(rack.id, draggedItem!.isPlaced ? draggedItem!.id : undefined);
+                                    
+                                    let isConflict = false;
+                                    for (let i = 0; i < uSize; i++) {
+                                        if (occupiedSlots.has(targetUPosition + i)) {
+                                            isConflict = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    dragHighlightInfo = {
+                                        startU: targetUPosition,
+                                        endU: targetUPosition + uSize - 1,
+                                        isConflict,
+                                    };
+                                }
+
+
                                 return (
-                                <div key={rack.id} className="bg-slate-900/40 p-3 rounded-lg">
+                                <div key={rack.id} className="bg-slate-900/40 p-3 rounded-lg" onDragLeave={handleDragLeaveRack}>
                                     <div className="flex justify-between items-center mb-2">
                                         {editingId === rack.id ? (
                                             <input type="text" value={editingValue} onChange={e => setEditingValue(e.target.value)} onBlur={handleEditBlur} onKeyDown={e => e.key === 'Enter' && handleEditBlur()} autoFocus className="font-semibold bg-slate-700 outline-none rounded-md px-1"/>
@@ -196,44 +299,30 @@ export const PhysicalView: React.FC<PhysicalViewProps> = ({ devices, rooms, rack
                                         <div className="flex flex-col-reverse text-right text-xs text-slate-500 pr-1 border-r border-slate-700">
                                            {Array.from({ length: rack.uHeight }, (_, i) => i + 1).map(u => <div key={u} className="h-5 flex items-center justify-end">{u}</div>)}
                                         </div>
-                                        <div className="grid grid-cols-1 auto-rows-[20px]" style={{ gridTemplateRows: `repeat(${rack.uHeight}, 20px)`}}>
-                                            {Array.from({ length: rack.uHeight }, (_, i) => i + 1).reverse().map(u => {
-                                                const isSelected = selectedSlot?.rackId === rack.id && selectedSlot.uPosition === u;
+                                        <div className="relative grid auto-rows-[20px]" style={{ gridTemplateRows: `repeat(${rack.uHeight}, 20px)`}}>
+                                            {Array.from({ length: rack.uHeight }, (_, i) => rack.uHeight - i).map(u => {
+                                                let slotClasses = "h-5 border-b border-slate-700/50 transition-colors duration-75";
+                                                if (dragHighlightInfo && u >= dragHighlightInfo.startU && u <= dragHighlightInfo.endU) {
+                                                    slotClasses += dragHighlightInfo.isConflict ? ' bg-red-500/40' : ' bg-green-500/40';
+                                                }
                                                 return (
                                                     <div 
                                                         key={u} 
-                                                        className={`h-5 border-b border-slate-700/50 cursor-pointer hover:bg-cyan-500/30 ${isSelected ? 'bg-cyan-500/50' : ''}`} 
-                                                        onClick={() => handleSlotClick(room.id, rack.id, u)}
-                                                        title={`Select U${u} as top position`}
+                                                        className={slotClasses}
+                                                        onDragOver={handleDragOver}
+                                                        onDragEnter={() => handleDragEnterSlot(rack.id, u)}
+                                                        onDrop={(e) => handleDropOnRack(e, room.id, rack.id, u)}
                                                     ></div>
-                                                );
-                                            })}
-                                            {devicesInRack.map(device => {
-                                                const isOutOfBounds = device.placement!.uPosition + device.uSize - 1 > rack.uHeight;
-                                                const borderClass = isOutOfBounds
-                                                    ? 'border-2 border-dashed border-red-500'
-                                                    : 'border-2 border-cyan-600';
-                                                
-                                                return (
-                                                    <div 
-                                                        key={device.id}
-                                                        className={`bg-cyan-800 rounded-md m-[-1px] text-white text-xs p-1 flex items-center justify-center overflow-hidden group relative ${borderClass}`}
-                                                        style={{ gridRowStart: rack.uHeight - device.placement!.uPosition - device.uSize + 2, gridRowEnd: `span ${device.uSize}` }}
-                                                        title={`${device.name} (${device.uSize}U)${isOutOfBounds ? ' - WARNING: Out of rack bounds!' : ''}`}
-                                                    >
-                                                        <span className="truncate">{device.name}</span>
-                                                        <div className="absolute top-0 right-0 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 z-10 rounded-bl-md">
-                                                            <button
-                                                                onClick={() => handleRemoveDevice(device.id)}
-                                                                className="p-1 rounded-full bg-slate-900/50 hover:bg-red-500/50 text-slate-300 hover:text-red-300"
-                                                                title="Unassign from rack"
-                                                            >
-                                                                <XIcon className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
                                                 )
                                             })}
+                                            {devicesInRack.map(device => (
+                                                <PlacedDevice
+                                                    key={device.id}
+                                                    device={device}
+                                                    rackUHeight={rack.uHeight}
+                                                    onDragStart={(e) => handleDragStart(e, { id: device.id, uSize: device.uSize, isPlaced: true })}
+                                                />
+                                            ))}
                                         </div>
                                     </div>
                                 </div>

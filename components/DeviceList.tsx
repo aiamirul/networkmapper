@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Device, DeviceType, TopologyLink, View } from '../types';
+import { Device, DeviceType, TopologyLink, View, Room, Rack } from '../types';
 import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon, TrashIcon, ViewGridIcon, CloudServerIcon } from './icons/Icons';
 import { ExportEncryptionModal } from './ExportEncryptionModal';
 import { ImportDecryptionModal } from './ImportDecryptionModal';
@@ -8,7 +8,9 @@ import { ImportDecryptionModal } from './ImportDecryptionModal';
 interface DeviceListProps {
   devices: Device[];
   topology: TopologyLink[];
-  importConfiguration: (config: { devices: Device[], topology: TopologyLink[] }) => void;
+  rooms: Room[];
+  racks: Rack[];
+  importConfiguration: (config: { devices: Device[], topology: TopologyLink[], rooms?: Room[], racks?: Rack[] }) => void;
   onSelectDevice: (id: string) => void;
   selectedDeviceId: string | null;
   onAddDevice: () => void;
@@ -43,7 +45,7 @@ const DeviceIcon = ({ type }: { type: DeviceType }) => {
   }
 };
 
-export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, importConfiguration, onSelectDevice, selectedDeviceId, onAddDevice, currentView, setCurrentView, searchQuery, setSearchQuery, onPrint, onOpenRecycleBin }) => {
+export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms, racks, importConfiguration, onSelectDevice, selectedDeviceId, onAddDevice, currentView, setCurrentView, searchQuery, setSearchQuery, onPrint, onOpenRecycleBin }) => {
   const [isExportEncryptModalOpen, setExportEncryptModalOpen] = useState(false);
   const [isImportDecryptModalOpen, setImportDecryptModalOpen] = useState(false);
   const [encryptedConfigToImport, setEncryptedConfigToImport] = useState<{ salt: string; data: string } | null>(null);
@@ -67,6 +69,8 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, impor
     const dataToExport = {
         devices,
         topology,
+        rooms,
+        racks,
     };
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
         JSON.stringify(dataToExport, null, 2)
@@ -247,7 +251,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, impor
       {isExportEncryptModalOpen && (
           <ExportEncryptionModal 
               onClose={() => setExportEncryptModalOpen(false)}
-              networkState={{ devices, topology }}
+              networkState={{ devices, topology, rooms, racks }}
           />
       )}
       {isImportDecryptModalOpen && encryptedConfigToImport && (

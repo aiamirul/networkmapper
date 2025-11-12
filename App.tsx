@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { DeviceList } from './components/DeviceList';
@@ -91,6 +90,8 @@ const App: React.FC = () => {
             <DeviceList
               devices={devices}
               topology={topology}
+              rooms={rooms}
+              racks={racks}
               importConfiguration={importConfiguration}
               onSelectDevice={handleSelectDevice}
               selectedDeviceId={selectedDeviceId}

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DeviceType, Device } from '../types';
 import { XIcon } from './icons/Icons';

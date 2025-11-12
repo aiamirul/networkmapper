@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
-import { Device, TopologyLink, EncryptedConfig } from '../types';
+import { Device, TopologyLink, EncryptedConfig, Room, Rack } from '../types';
 import { encryptData } from '../services/cryptoService';
 import { XIcon } from './icons/Icons';
 
 interface ExportEncryptionModalProps {
   onClose: () => void;
-  networkState: { devices: Device[], topology: TopologyLink[] };
+  networkState: { devices: Device[], topology: TopologyLink[], rooms: Room[], racks: Rack[] };
 }
 
 export const ExportEncryptionModal: React.FC<ExportEncryptionModalProps> = ({ onClose, networkState }) => {

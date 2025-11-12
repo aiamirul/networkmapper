@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
-import { Device, TopologyLink } from '../types';
+import { Device, TopologyLink, Room, Rack } from '../types';
 import { decryptData } from '../services/cryptoService';
 import { XIcon } from './icons/Icons';
 
 interface ImportDecryptionModalProps {
   onClose: () => void;
   encryptedData: { salt: string; data: string };
-  onSuccess: (config: { devices: Device[], topology: TopologyLink[] }) => void;
+  onSuccess: (config: { devices: Device[], topology: TopologyLink[], rooms?: Room[], racks?: Rack[] }) => void;
 }
 
 export const ImportDecryptionModal: React.FC<ImportDecryptionModalProps> = ({ onClose, encryptedData, onSuccess }) => {
