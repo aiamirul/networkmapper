@@ -24,7 +24,16 @@
     body {
         font-family: 'Inter', sans-serif;
     }
+    .print-only {
+        display: none;
+    }
     @media print {
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
       body {
         background-color: #fff !important;
         color: #000 !important;
@@ -36,16 +45,6 @@
       @page {
         size: A4;
         margin: 1.5cm;
-      }
-
-      /* Hide the main application container during print */
-      body > #root > div:not(#printable-content) {
-        display: none !important;
-      }
-
-      /* Ensure the printable content is displayed */
-      #printable-content {
-        display: block !important;
       }
       
       .print-container {

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { DeviceList } from './components/DeviceList';
@@ -78,7 +79,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 font-sans text-slate-300">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 font-sans text-slate-300 no-print">
         <Header 
           macFormat={macFormat} 
           setMacFormat={setMacFormat} 
@@ -159,7 +160,7 @@ const App: React.FC = () => {
             onEmpty={emptyRecycleBin}
         />
       </div>
-      <div id="printable-content" className="hidden">
+      <div id="printable-content" className="print-only">
         <div className="print-container">
             <h1 className="print-header">Network Devices Report</h1>
             <p className="print-subheader">Generated on: {new Date().toLocaleDateString()}</p>
