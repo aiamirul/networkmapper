@@ -61,77 +61,87 @@ export const PhysicalView: React.FC<PhysicalViewProps> = ({ devices, rooms, rack
     const unplacedDevices = useMemo(() => devices.filter(d => !d.placement), [devices]);
     const placedDevices = useMemo(() => devices.filter(d => d.placement), [devices]);
 
-    const isPlacementValid = useCallback((
-        deviceToPlace: Device,
-        newPlacement: { rackId: string, uPosition: number },
-        rack: Rack | undefined,
-        allPlacedDevices: Device[]
-    ): boolean => {
-        if (!rack) return false;
-
-        // Check boundaries
-        if (newPlacement.uPosition < 1 || newPlacement.uPosition + deviceToPlace.uSize - 1 > rack.uHeight) {
-            return false;
-        }
-
-        const devicesInRack = allPlacedDevices.filter(d => d.placement?.rackId === newPlacement.rackId);
-        
-        // Check for collisions
-        const newPlacementRange = { start: newPlacement.uPosition, end: newPlacement.uPosition + deviceToPlace.uSize - 1 };
-        
-        const isCollision = devicesInRack.some(d => {
-            if (d.id === deviceToPlace.id) return false; // Ignore itself when moving
-            const existingPlacement = d.placement!;
-            const existingRange = { start: existingPlacement.uPosition, end: existingPlacement.uPosition + d.uSize - 1 };
-            return newPlacementRange.start <= existingRange.end && newPlacementRange.end >= existingRange.start;
-        });
-
-        return !isCollision;
-    }, []);
-
-
     const handleDropOnRack = (e: React.DragEvent<HTMLDivElement>, roomId: string, rackId: string, uSlot: number) => {
         e.preventDefault();
         const deviceId = e.dataTransfer.getData('deviceId');
-        const device = devices.find(d => d.id === deviceId);
-        const rack = racks.find(r => r.id === rackId);
+        const deviceToPlace = devices.find(d => d.id === deviceId);
+        if (!deviceToPlace) return;
 
-        if (!device || !rack) return;
-        
-        // The U-slot where the device is dropped is considered the TOP of the device.
-        // We need to calculate the bottom position, which is stored as `uPosition`.
-        const uPosition = uSlot - device.uSize + 1;
+        const targetUPosition = Math.max(1, uSlot - deviceToPlace.uSize + 1);
 
-        if (isPlacementValid(device, { rackId, uPosition }, rack, placedDevices)) {
-            updateDevicePlacement(deviceId, { roomId, rackId, uPosition });
-        } else {
-            console.error("Invalid placement: collision or out of bounds.");
+        // If the device is moved within the same rack, it leaves a gap. We should close that gap.
+        const originalPlacement = deviceToPlace.placement;
+        if (originalPlacement && originalPlacement.rackId === rackId) {
+            const devicesToShiftDown = devices.filter(d =>
+                d.id !== deviceId &&
+                d.placement?.rackId === rackId &&
+                d.placement.uPosition > originalPlacement.uPosition
+            ).sort((a, b) => a.placement!.uPosition - b.placement!.uPosition); // Process bottom-up
+
+            devicesToShiftDown.forEach(d => {
+                const newPos = d.placement!.uPosition - deviceToPlace.uSize;
+                updateDevicePlacement(d.id, { ...d.placement!, uPosition: newPos });
+            });
         }
+        
+        // After potentially shifting devices down, get the latest state of devices to push up.
+        // This relies on React batching state updates.
+        const potentialTargetUPosition = originalPlacement && originalPlacement.rackId === rackId && targetUPosition > originalPlacement.uPosition
+            ? targetUPosition - deviceToPlace.uSize
+            : targetUPosition;
+
+        const devicesToPush = devices.filter(d =>
+            d.id !== deviceId &&
+            d.placement?.rackId === rackId &&
+            (d.placement.uPosition + d.uSize - 1) >= potentialTargetUPosition
+        ).sort((a, b) => b.placement!.uPosition - a.placement!.uPosition); // Process top-down
+
+        devicesToPush.forEach(device => {
+             // Re-fetch device from props to get latest placement after potential down-shift
+            const currentDevice = devices.find(d => d.id === device.id)!;
+            const currentPosition = currentDevice.placement!.uPosition;
+            updateDevicePlacement(device.id, { ...device.placement!, uPosition: currentPosition + deviceToPlace.uSize });
+        });
+
+        updateDevicePlacement(deviceId, { roomId, rackId, uPosition: potentialTargetUPosition });
     };
+
+    const isCollision = useCallback((
+        deviceToCheck: Device,
+        newPlacement: { rackId: string, uPosition: number },
+        allPlacedDevices: Device[]
+    ): boolean => {
+        if (newPlacement.uPosition < 1) return true; // Can't move below U1
+
+        const devicesInRack = allPlacedDevices.filter(d => d.placement?.rackId === newPlacement.rackId);
+        const newRange = { start: newPlacement.uPosition, end: newPlacement.uPosition + deviceToCheck.uSize - 1 };
+        
+        return devicesInRack.some(d => {
+            if (d.id === deviceToCheck.id) return false; // Ignore itself
+            const existingPlacement = d.placement!;
+            const existingRange = { start: existingPlacement.uPosition, end: existingPlacement.uPosition + d.uSize - 1 };
+            return newRange.start <= existingRange.end && newRange.end >= existingRange.start;
+        });
+    }, []);
 
     const handleMoveDevice = useCallback((device: Device, direction: 'up' | 'down') => {
         if (!device.placement) return;
 
         const { rackId, uPosition, roomId } = device.placement;
-        const rack = racks.find(r => r.id === rackId);
-        if (!rack) return;
-
         const newUPosition = direction === 'up' ? uPosition + 1 : uPosition - 1;
         
-        if (isPlacementValid(device, { rackId, uPosition: newUPosition }, rack, placedDevices)) {
+        if (!isCollision(device, { rackId, uPosition: newUPosition }, placedDevices)) {
             updateDevicePlacement(device.id, { roomId, rackId, uPosition: newUPosition });
         }
-    }, [racks, placedDevices, isPlacementValid, updateDevicePlacement]);
+    }, [placedDevices, isCollision, updateDevicePlacement]);
 
     const canMove = useCallback((device: Device, direction: 'up' | 'down'): boolean => {
         if (!device.placement) return false;
         const { rackId, uPosition } = device.placement;
-        const rack = racks.find(r => r.id === rackId);
-        if (!rack) return false;
         
         const newUPosition = direction === 'up' ? uPosition + 1 : uPosition - 1;
-        return isPlacementValid(device, { rackId, uPosition: newUPosition }, rack, placedDevices);
-    }, [racks, placedDevices, isPlacementValid]);
+        return !isCollision(device, { rackId, uPosition: newUPosition }, placedDevices);
+    }, [placedDevices, isCollision]);
 
 
     const handleAddRoom = (e: React.FormEvent) => {
@@ -214,39 +224,46 @@ export const PhysicalView: React.FC<PhysicalViewProps> = ({ devices, rooms, rack
                                             {Array.from({ length: rack.uHeight }, (_, i) => i + 1).reverse().map(u => (
                                                 <div key={u} className="h-5 border-b border-slate-700/50" onDragOver={e => e.preventDefault()} onDrop={e => handleDropOnRack(e, room.id, rack.id, u)}></div>
                                             ))}
-                                            {devicesInRack.map(device => (
-                                                <div 
-                                                    key={device.id}
-                                                    draggable
-                                                    onDragStart={(e) => {
-                                                        e.dataTransfer.setData('deviceId', device.id);
-                                                        e.dataTransfer.effectAllowed = 'move';
-                                                    }}
-                                                    className="bg-cyan-800 border-2 border-cyan-600 rounded-md m-[-1px] text-white text-xs p-1 flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden group relative"
-                                                    style={{ gridRowStart: rack.uHeight - device.placement!.uPosition - device.uSize + 2, gridRowEnd: `span ${device.uSize}` }}
-                                                    title={`${device.name} (${device.uSize}U)`}
-                                                >
-                                                    <span className="truncate">{device.name}</span>
-                                                    <div className="absolute inset-0 flex justify-between items-center px-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 z-10">
-                                                        <button
-                                                            onClick={() => handleMoveDevice(device, 'down')}
-                                                            disabled={!canMove(device, 'down')}
-                                                            className="p-1 rounded-full bg-slate-900/50 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                            title="Move Down"
-                                                        >
-                                                            <ChevronDownIcon className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleMoveDevice(device, 'up')}
-                                                            disabled={!canMove(device, 'up')}
-                                                            className="p-1 rounded-full bg-slate-900/50 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                                                            title="Move Up"
-                                                        >
-                                                            <ChevronUpIcon className="w-4 h-4" />
-                                                        </button>
+                                            {devicesInRack.map(device => {
+                                                const isOutOfBounds = device.placement!.uPosition + device.uSize - 1 > rack.uHeight;
+                                                const borderClass = isOutOfBounds
+                                                    ? 'border-2 border-dashed border-red-500'
+                                                    : 'border-2 border-cyan-600';
+                                                
+                                                return (
+                                                    <div 
+                                                        key={device.id}
+                                                        draggable
+                                                        onDragStart={(e) => {
+                                                            e.dataTransfer.setData('deviceId', device.id);
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                        }}
+                                                        className={`bg-cyan-800 rounded-md m-[-1px] text-white text-xs p-1 flex items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden group relative ${borderClass}`}
+                                                        style={{ gridRowStart: rack.uHeight - device.placement!.uPosition - device.uSize + 2, gridRowEnd: `span ${device.uSize}` }}
+                                                        title={`${device.name} (${device.uSize}U)${isOutOfBounds ? ' - WARNING: Out of rack bounds!' : ''}`}
+                                                    >
+                                                        <span className="truncate">{device.name}</span>
+                                                        <div className="absolute inset-0 flex justify-between items-center px-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 z-10">
+                                                            <button
+                                                                onClick={() => handleMoveDevice(device, 'down')}
+                                                                disabled={!canMove(device, 'down')}
+                                                                className="p-1 rounded-full bg-slate-900/50 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                title="Move Down"
+                                                            >
+                                                                <ChevronDownIcon className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleMoveDevice(device, 'up')}
+                                                                disabled={!canMove(device, 'up')}
+                                                                className="p-1 rounded-full bg-slate-900/50 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                title="Move Up"
+                                                            >
+                                                                <ChevronUpIcon className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                )
+                                            })}
                                         </div>
                                     </div>
                                 </div>
