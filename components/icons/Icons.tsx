@@ -92,7 +92,7 @@ export const XIcon: React.FC<IconProps> = ({ className }) => (
 
 export const BrainCircuitIcon: React.FC<IconProps> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 8.25H14.25M9.75 12H14.25M9.75 15.75H14.25M5.25 4.5h13.5c.621 0 1.125.504 1.125 1.125v12.75c0 .621-.504 1.125-1.125 1.125H5.25c-.621 0-1.125-.504-1.125-1.125V5.625c0-.621.504-1.125 1.125-1.125Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 8.25H14.25M9.75 12H14.25M9.75 15.75H14.25M5.25 4.5h13.5c.621 0 1.125.504 1.125 1.125v12.75c0 .621-.504 1.125-1.125 1.125H5.25c-.621 0-1.125-.504-1.125-1.125V5.625c0 .621.504-1.125 1.125-1.125Z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 12a2.25 2.25 0 1 0-4.5 0 2.25 2.25 0 0 0 4.5 0Z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M18 12a2.25 2.25 0 1 0-4.5 0 2.25 2.25 0 0 0 4.5 0Z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12H4.5m15 0H18m-5.25-3.75V6m-3.75 12.75v-2.25" />
@@ -152,6 +152,12 @@ export const KeyIcon: React.FC<IconProps> = ({ className }) => (
 export const LockIcon: React.FC<IconProps> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+);
+
+export const DuplicateIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
     </svg>
 );
 

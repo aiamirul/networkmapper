@@ -13,6 +13,7 @@ interface MainContentProps {
   deleteConnection: (deviceId: string, connectionId: string) => void;
   updateDevice: (deviceId: string, updates: Partial<Omit<Device, 'id' | 'connections' | 'changeLog'>>) => void;
   deleteDevice: (deviceId: string) => void;
+  duplicateDevice: (deviceId: string) => void;
   devices: Device[];
   topology: TopologyLink[];
   addTopologyLink: (from: string, to: string) => void;
@@ -37,6 +38,7 @@ export const MainContent: React.FC<MainContentProps> = ({
   deleteConnection,
   updateDevice,
   deleteDevice,
+  duplicateDevice,
   devices,
   topology,
   addTopologyLink,
@@ -91,6 +93,8 @@ export const MainContent: React.FC<MainContentProps> = ({
       topology={topology}
       addTopologyLink={addTopologyLink}
       deleteTopologyLink={deleteTopologyLink}
+      deleteDevice={deleteDevice}
+      duplicateDevice={duplicateDevice}
     />
   );
 };

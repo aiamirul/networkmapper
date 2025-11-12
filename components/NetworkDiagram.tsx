@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink } from '../types';
-import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PlusIcon, MinusIcon, ZoomResetIcon } from './icons/Icons';
+import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PlusIcon, MinusIcon, ZoomResetIcon, DuplicateIcon } from './icons/Icons';
+import { ConfirmationModal } from './ConfirmationModal';
 import * as d3 from 'd3';
 
 // Fix: Explicitly add d3.SimulationNodeDatum properties to the Node interface 
@@ -25,6 +26,8 @@ interface NetworkDiagramProps {
     topology: TopologyLink[];
     addTopologyLink: (from: string, to: string) => void;
     deleteTopologyLink: (linkId: string) => void;
+    deleteDevice: (deviceId: string) => void;
+    duplicateDevice: (deviceId: string) => void;
 }
 
 const DEVICE_TYPE_COLORS: Record<DeviceType, string> = {
@@ -58,13 +61,15 @@ const getDeviceIconSvg = (type: DeviceType): string => {
     return `<g transform="${transform}">${path}</g>`;
 };
 
-export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topology, addTopologyLink, deleteTopologyLink }) => {
+export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topology, addTopologyLink, deleteTopologyLink, deleteDevice, duplicateDevice }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>();
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [linking, setLinking] = useState<string | null>(null);
     const [topologySearchQuery, setTopologySearchQuery] = useState('');
+    const [menuData, setMenuData] = useState<{ x: number; y: number; node: Node } | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<Device | null>(null);
 
     const nodes = useMemo<Node[]>(() => devices.map(device => ({ id: device.id, device })), [devices]);
     const links = useMemo<Link[]>(() => topology.map(link => ({ id: link.id, source: link.from, target: link.to })), [topology]);
@@ -83,6 +88,15 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
 
         return () => resizeObserver.disconnect();
     }, []);
+    
+    useEffect(() => {
+        const handleClickOutside = () => setMenuData(null);
+        if (menuData) {
+            window.addEventListener('click', handleClickOutside);
+        }
+        return () => window.removeEventListener('click', handleClickOutside);
+    }, [menuData]);
+
 
     useEffect(() => {
         if (!svgRef.current || dimensions.width === 0) return;
@@ -204,6 +218,12 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
                 addTopologyLink(linking, d.id);
                 setLinking(null);
             }
+        }).on("dblclick", (event, d) => {
+            event.preventDefault();
+            simulation.alphaTarget(0);
+            d.fx = d.x ?? null;
+            d.fy = d.y ?? null;
+            setMenuData({ x: event.pageX, y: event.pageY, node: d });
         });
         
         function ticked() {
@@ -229,8 +249,10 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
 
         function dragended(event: d3.D3DragEvent<any, Node, any>, d: Node) {
             if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
+            if (!menuData || menuData.node.id !== d.id) {
+                d.fx = null;
+                d.fy = null;
+            }
         }
 
         const zoomed = (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
@@ -242,7 +264,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
             .on('zoom', zoomed);
         
         zoomRef.current = zoom;
-        svg.call(zoom);
+        svg.call(zoom).on("dblclick.zoom", null);
 
 
     }, [nodes, links, dimensions, linking, addTopologyLink, topologySearchQuery]);
@@ -279,6 +301,44 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
         }
     };
 
+    const ContextMenu = () => {
+        if (!menuData) return null;
+    
+        const menuActions = [
+            { label: 'Add Connection', icon: LinkIcon, action: () => handleNodeLinkClick(menuData.node.id) },
+            { label: 'Duplicate Device', icon: DuplicateIcon, action: () => duplicateDevice(menuData.node.id) },
+            { label: 'Delete Device', icon: TrashIcon, action: () => setDeleteConfirm(menuData.node.device), isDanger: true },
+        ];
+        
+        return (
+            <div
+                style={{ top: menuData.y, left: menuData.x }}
+                className="absolute z-30 bg-slate-700 rounded-md shadow-lg border border-slate-600 w-48"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="p-2 font-semibold text-slate-200 border-b border-slate-600 truncate">{menuData.node.device.name}</div>
+                <ul className="py-1">
+                    {menuActions.map(({ label, icon: Icon, action, isDanger }) => (
+                        <li key={label}>
+                            <button
+                                onClick={() => {
+                                    action();
+                                    setMenuData(null);
+                                }}
+                                className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
+                                    isDanger ? 'text-red-400 hover:bg-red-500/10' : 'text-slate-300 hover:bg-slate-600'
+                                }`}
+                            >
+                                <Icon className="w-4 h-4" />
+                                <span>{label}</span>
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    };
+
     return (
         <div className="h-full w-full bg-slate-800/50 rounded-lg flex flex-col relative">
             <div className="p-4 border-b border-slate-700/50 flex justify-between items-center gap-4">
@@ -307,6 +367,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
             )}
             <div className="flex-grow relative p-4" ref={containerRef}>
                 <svg ref={svgRef} width={dimensions.width} height={dimensions.height}></svg>
+                <ContextMenu />
                 <div className="absolute bottom-4 right-4 bg-slate-900/50 backdrop-blur-sm rounded-lg border border-slate-700/50 flex flex-col z-10">
                     <button onClick={handleZoomIn} className="p-2 text-slate-300 hover:bg-slate-700 rounded-t-lg transition-colors" title="Zoom In">
                         <PlusIcon className="w-5 h-5" />
@@ -363,6 +424,22 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
                     </div>
                 </div>
             </div>
+            {deleteConfirm && (
+                <ConfirmationModal
+                    isOpen={true}
+                    onClose={() => setDeleteConfirm(null)}
+                    onConfirm={() => {
+                        if (deleteConfirm) {
+                            deleteDevice(deleteConfirm.id);
+                        }
+                        setDeleteConfirm(null);
+                    }}
+                    title="Confirm Device Deletion"
+                    message={<>Are you sure you want to move <strong>"{deleteConfirm.name}"</strong> to the recycle bin? This will also remove it from the topology.</>}
+                    confirmButtonText="Move to Bin"
+                    confirmButtonVariant="danger"
+                />
+            )}
         </div>
     );
 };

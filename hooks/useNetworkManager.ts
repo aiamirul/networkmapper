@@ -189,6 +189,25 @@ export const useNetworkManager = () => {
     });
   }, []);
 
+  const duplicateDevice = useCallback((deviceId: string) => {
+    setNetworkState(prev => {
+        const originalDevice = prev.devices.find(d => d.id === deviceId);
+        if (!originalDevice) return prev;
+
+        const newDevice: Device = {
+            ...originalDevice,
+            id: `${originalDevice.type.toLowerCase()}-${Date.now()}`,
+            name: `${originalDevice.name} (Copy)`,
+            ipAddress: '', // IP should be unique, clear it
+            connections: [], // Don't copy connections
+            placement: undefined, // Don't copy placement
+            changeLog: [createLogEntry(`Device duplicated from ${originalDevice.name} (${originalDevice.id}).`)],
+        };
+
+        return { ...prev, devices: [...prev.devices, newDevice] };
+    });
+  }, []);
+
   const restoreDevice = useCallback((deviceId: string) => {
     setNetworkState(prev => {
         const deviceToRestore = prev.deletedDevices.find(d => d.id === deviceId);
@@ -356,6 +375,7 @@ export const useNetworkManager = () => {
     addDevice, 
     updateDevice, 
     deleteDevice,
+    duplicateDevice,
     restoreDevice,
     permanentlyDeleteDevice,
     emptyRecycleBin,

@@ -17,6 +17,7 @@ const App: React.FC = () => {
     addDevice,
     updateDevice,
     deleteDevice: deleteDeviceFromHook,
+    duplicateDevice,
     addConnection,
     updateConnection,
     deleteConnection,
@@ -110,6 +111,7 @@ const App: React.FC = () => {
               deleteConnection={deleteConnection}
               updateDevice={updateDevice}
               deleteDevice={handleDeleteDevice}
+              duplicateDevice={duplicateDevice}
               devices={devices}
               topology={topology}
               addTopologyLink={addTopologyLink}
