@@ -6,6 +6,7 @@ export enum DeviceType {
   AP = 'AP',
   SERVER = 'SERVER',
   PRINTER = 'PRINTER',
+  CLOUD_SERVER = 'CLOUD_SERVER',
   OTHER = 'OTHER',
 }
 

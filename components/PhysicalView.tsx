@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Device, Room, Rack, DevicePlacement, DeviceType } from '../types';
-import { PlusIcon, TrashIcon, ServerIcon, SwitchIcon, RouterIcon, PCIcon, APIcon, PrinterIcon, SettingsIcon, ChevronUpIcon, ChevronDownIcon } from './icons/Icons';
+import { PlusIcon, TrashIcon, ServerIcon, SwitchIcon, RouterIcon, PCIcon, APIcon, PrinterIcon, SettingsIcon, ChevronUpIcon, ChevronDownIcon, CloudServerIcon } from './icons/Icons';
 import { ConfirmationModal } from './ConfirmationModal';
 
 interface PhysicalViewProps {
@@ -29,7 +29,7 @@ const DraggableDevice: React.FC<{ device: Device }> = ({ device }) => {
             className="p-2 bg-slate-700 rounded-md cursor-grab active:cursor-grabbing flex items-center gap-2"
         >
             <DeviceTypeIcon type={device.type} className="w-4 h-4 text-slate-400 shrink-0"/>
-            <span className="text-sm truncate">{device.name} ({device.uSize}U)</span>
+            <span className="text-sm truncate">{device.name} {device.uSize > 0 && `(${device.uSize}U)`}</span>
         </div>
     );
 };
@@ -41,6 +41,7 @@ const DeviceTypeIcon = ({ type, className }: { type: DeviceType, className?: str
     case DeviceType.ROUTER: return <RouterIcon className={finalClassName} />;
     case DeviceType.PC: return <PCIcon className={finalClassName} />;
     case DeviceType.SERVER: return <ServerIcon className={finalClassName} />;
+    case DeviceType.CLOUD_SERVER: return <CloudServerIcon className={finalClassName} />;
     case DeviceType.AP: return <APIcon className={finalClassName} />;
     case DeviceType.PRINTER: return <PrinterIcon className={finalClassName} />;
     case DeviceType.OTHER: return <SettingsIcon className={finalClassName} />;
@@ -89,13 +90,17 @@ export const PhysicalView: React.FC<PhysicalViewProps> = ({ devices, rooms, rack
     }, []);
 
 
-    const handleDropOnRack = (e: React.DragEvent<HTMLDivElement>, roomId: string, rackId: string, uPosition: number) => {
+    const handleDropOnRack = (e: React.DragEvent<HTMLDivElement>, roomId: string, rackId: string, uSlot: number) => {
         e.preventDefault();
         const deviceId = e.dataTransfer.getData('deviceId');
         const device = devices.find(d => d.id === deviceId);
         const rack = racks.find(r => r.id === rackId);
 
         if (!device || !rack) return;
+        
+        // The U-slot where the device is dropped is considered the TOP of the device.
+        // We need to calculate the bottom position, which is stored as `uPosition`.
+        const uPosition = uSlot - device.uSize + 1;
 
         if (isPlacementValid(device, { rackId, uPosition }, rack, placedDevices)) {
             updateDevicePlacement(deviceId, { roomId, rackId, uPosition });

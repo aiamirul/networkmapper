@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink, View } from '../types';
-import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon, TrashIcon, ViewGridIcon } from './icons/Icons';
+import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon, TrashIcon, ViewGridIcon, CloudServerIcon } from './icons/Icons';
 import { ExportEncryptionModal } from './ExportEncryptionModal';
 import { ImportDecryptionModal } from './ImportDecryptionModal';
 
@@ -29,6 +29,8 @@ const DeviceIcon = ({ type }: { type: DeviceType }) => {
       return <PCIcon className={className} />;
     case DeviceType.SERVER:
       return <ServerIcon className={className} />;
+    case DeviceType.CLOUD_SERVER:
+      return <CloudServerIcon className={className} />;
     case DeviceType.AP:
       return <APIcon className={className} />;
     case DeviceType.PRINTER:

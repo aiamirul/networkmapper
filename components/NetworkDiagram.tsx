@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink } from '../types';
-import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PlusIcon, MinusIcon, ZoomResetIcon, DuplicateIcon } from './icons/Icons';
+import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PlusIcon, MinusIcon, ZoomResetIcon, DuplicateIcon, CloudServerIcon } from './icons/Icons';
 import { ConfirmationModal } from './ConfirmationModal';
 import * as d3 from 'd3';
 
@@ -35,6 +35,7 @@ const DEVICE_TYPE_COLORS: Record<DeviceType, string> = {
     [DeviceType.ROUTER]: '#22c55e', // green-500
     [DeviceType.PC]: '#8b5cf6', // violet-500
     [DeviceType.SERVER]: '#f97316', // orange-500
+    [DeviceType.CLOUD_SERVER]: '#a5b4fc', // indigo-300
     [DeviceType.AP]: '#eab308', // yellow-500
     [DeviceType.PRINTER]: '#64748b', // slate-500
     [DeviceType.OTHER]: '#ec4899', // pink-500
@@ -52,6 +53,7 @@ const getDeviceIconSvg = (type: DeviceType): string => {
         [DeviceType.ROUTER]: `<path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" /><rect x="3" y="10" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>`,
         [DeviceType.PC]: `<path d="M12 18.5v-3.5m-4.5 3.5h9M5.625 5.5h12.75a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H5.625a1 1 0 0 1-1-1v-6.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
         [DeviceType.SERVER]: `<path d="M3.375 6.375h17.25M6.375 9.375h1.5m-1.5 6h1.5m1.5-6h1.5m4.5 0h1.5m-9 9h9m-12-15a2 2 0 0 1 2-2h13.25a2 2 0 0 1 2 2v13.25a2 2 0 0 1-2 2H5.375a2 2 0 0 1-2-2V4.375Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+        [DeviceType.CLOUD_SERVER]: `<path d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.5 4.5 0 002.25 15z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
         [DeviceType.AP]: `<path d="M12 5c3.866 0 7 1.79 7 4m-14 0c0-2.21 3.134-4 7-4m-9 8h2m14 0h2m-10-4a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
         [DeviceType.PRINTER]: `<path d="M8.625 15.375v4.5m6.75-4.5v4.5m-10.5-9h14.25v-6a1 1 0 0 0-1-1H6.375a1 1 0 0 0-1 1v6Zm0 0h14.25m-14.25 0a2 2 0 0 0-2 2v4.5a1 1 0 0 0 1 1h16.25a1 1 0 0 0 1-1v-4.5a2 2 0 0 0-2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
         [DeviceType.OTHER]: `<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
@@ -278,6 +280,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
         [DeviceType.SWITCH]: SwitchIcon,
         [DeviceType.PC]: PCIcon,
         [DeviceType.SERVER]: ServerIcon,
+        [DeviceType.CLOUD_SERVER]: CloudServerIcon,
         [DeviceType.AP]: APIcon,
         [DeviceType.PRINTER]: PrinterIcon,
         [DeviceType.OTHER]: SettingsIcon,

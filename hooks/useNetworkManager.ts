@@ -68,6 +68,16 @@ const INITIAL_DEVICES: Device[] = [
         uSize: 4, // Represents a tower PC
         connections: [],
         changeLog: [{ id: 'log-init-5', timestamp: new Date().toISOString(), change: 'Device created.' }]
+    },
+    {
+        id: 'cloud-srv-01',
+        name: 'Web App Server',
+        type: DeviceType.CLOUD_SERVER,
+        ipAddress: '104.18.30.124',
+        model: 'Cloudflare Hosted',
+        uSize: 0, // Cloud servers don't have a U size
+        connections: [],
+        changeLog: [{ id: 'log-init-6', timestamp: new Date().toISOString(), change: 'Device created.' }]
     }
 ];
 
@@ -76,6 +86,7 @@ const INITIAL_TOPOLOGY: TopologyLink[] = [
     { id: 'link-2', from: 'sw-01', to: 'sw-02' },
     { id: 'link-3', from: 'sw-01', to: 'srv-01' },
     { id: 'link-4', from: 'sw-02', to: 'pc-01' },
+    { id: 'link-5', from: 'rtr-01', to: 'cloud-srv-01' },
 ];
 
 const createLogEntry = (change: string): ChangeLogEntry => ({
