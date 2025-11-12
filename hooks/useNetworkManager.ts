@@ -306,6 +306,13 @@ export const useNetworkManager = () => {
     setNetworkState(prev => ({ ...prev, topology: prev.topology.filter(l => l.id !== linkId) }));
   }, []);
 
+  const deleteAllLinksForDevice = useCallback((deviceId: string) => {
+    setNetworkState(prev => ({
+      ...prev,
+      topology: prev.topology.filter(link => link.from !== deviceId && link.to !== deviceId)
+    }));
+  }, []);
+
   const importConfiguration = useCallback((config: { devices: Device[], topology: TopologyLink[], rooms?: Room[], racks?: Rack[] }) => {
     if (config && Array.isArray(config.devices) && Array.isArray(config.topology)) {
         setNetworkState({ 
@@ -395,6 +402,7 @@ export const useNetworkManager = () => {
     deleteConnection, 
     addTopologyLink, 
     deleteTopologyLink,
+    deleteAllLinksForDevice,
     importConfiguration,
     addRoom,
     updateRoom,

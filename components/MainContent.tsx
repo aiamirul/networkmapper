@@ -7,6 +7,7 @@ import { PhysicalView } from './PhysicalView';
 interface MainContentProps {
   view: View;
   selectedDevice: Device | null;
+  onSelectDevice: (id: string) => void;
   macFormat: MacFormat;
   addConnection: (deviceId: string, connection: Omit<Connection, 'id'>) => void;
   updateConnection: (deviceId: string, connectionId: string, updates: Partial<Connection>) => void;
@@ -18,6 +19,7 @@ interface MainContentProps {
   topology: TopologyLink[];
   addTopologyLink: (from: string, to: string) => void;
   deleteTopologyLink: (linkId: string) => void;
+  deleteAllLinksForDevice: (deviceId: string) => void;
   rooms: Room[];
   racks: Rack[];
   addRoom: (name: string) => void;
@@ -32,6 +34,7 @@ interface MainContentProps {
 export const MainContent: React.FC<MainContentProps> = ({
   view,
   selectedDevice,
+  onSelectDevice,
   macFormat,
   addConnection,
   updateConnection,
@@ -43,6 +46,7 @@ export const MainContent: React.FC<MainContentProps> = ({
   topology,
   addTopologyLink,
   deleteTopologyLink,
+  deleteAllLinksForDevice,
   rooms,
   racks,
   addRoom,
@@ -91,8 +95,10 @@ export const MainContent: React.FC<MainContentProps> = ({
     <NetworkDiagram
       devices={devices}
       topology={topology}
+      onSelectDevice={onSelectDevice}
       addTopologyLink={addTopologyLink}
       deleteTopologyLink={deleteTopologyLink}
+      deleteAllLinksForDevice={deleteAllLinksForDevice}
       deleteDevice={deleteDevice}
       duplicateDevice={duplicateDevice}
     />

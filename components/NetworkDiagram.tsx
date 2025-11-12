@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink } from '../types';
-import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PlusIcon, MinusIcon, ZoomResetIcon, DuplicateIcon, CloudServerIcon } from './icons/Icons';
+import { RouterIcon, SwitchIcon, LinkIcon, XIcon, TrashIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PlusIcon, MinusIcon, ZoomResetIcon, DuplicateIcon, CloudServerIcon, EyeIcon, CutIcon } from './icons/Icons';
 import { ConfirmationModal } from './ConfirmationModal';
 import * as d3 from 'd3';
 
@@ -24,8 +24,10 @@ interface Link extends d3.SimulationLinkDatum<Node> {
 interface NetworkDiagramProps {
     devices: Device[];
     topology: TopologyLink[];
+    onSelectDevice: (id: string) => void;
     addTopologyLink: (from: string, to: string) => void;
     deleteTopologyLink: (linkId: string) => void;
+    deleteAllLinksForDevice: (deviceId: string) => void;
     deleteDevice: (deviceId: string) => void;
     duplicateDevice: (deviceId: string) => void;
 }
@@ -63,7 +65,7 @@ const getDeviceIconSvg = (type: DeviceType): string => {
     return `<g transform="${transform}">${path}</g>`;
 };
 
-export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topology, addTopologyLink, deleteTopologyLink, deleteDevice, duplicateDevice }) => {
+export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topology, onSelectDevice, addTopologyLink, deleteTopologyLink, deleteAllLinksForDevice, deleteDevice, duplicateDevice }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>();
@@ -72,6 +74,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
     const [topologySearchQuery, setTopologySearchQuery] = useState('');
     const [menuData, setMenuData] = useState<{ x: number; y: number; node: Node } | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<Device | null>(null);
+    const [cutConfirm, setCutConfirm] = useState<Device | null>(null);
 
     const nodes = useMemo<Node[]>(() => devices.map(device => ({ id: device.id, device })), [devices]);
     const links = useMemo<Link[]>(() => topology.map(link => ({ id: link.id, source: link.from, target: link.to })), [topology]);
@@ -308,7 +311,9 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
         if (!menuData) return null;
     
         const menuActions = [
+            { label: 'View Device', icon: EyeIcon, action: () => onSelectDevice(menuData.node.id) },
             { label: 'Add Connection', icon: LinkIcon, action: () => handleNodeLinkClick(menuData.node.id) },
+            { label: 'Cut Connections', icon: CutIcon, action: () => setCutConfirm(menuData.node.device), isDanger: true },
             { label: 'Duplicate Device', icon: DuplicateIcon, action: () => duplicateDevice(menuData.node.id) },
             { label: 'Delete Device', icon: TrashIcon, action: () => setDeleteConfirm(menuData.node.device), isDanger: true },
         ];
@@ -316,7 +321,7 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
         return (
             <div
                 style={{ top: menuData.y, left: menuData.x }}
-                className="absolute z-30 bg-slate-700 rounded-md shadow-lg border border-slate-600 w-48"
+                className="absolute z-30 bg-slate-700 rounded-md shadow-lg border border-slate-600 w-52"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="p-2 font-semibold text-slate-200 border-b border-slate-600 truncate">{menuData.node.device.name}</div>
@@ -440,6 +445,22 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
                     title="Confirm Device Deletion"
                     message={<>Are you sure you want to move <strong>"{deleteConfirm.name}"</strong> to the recycle bin? This will also remove it from the topology.</>}
                     confirmButtonText="Move to Bin"
+                    confirmButtonVariant="danger"
+                />
+            )}
+             {cutConfirm && (
+                <ConfirmationModal
+                    isOpen={true}
+                    onClose={() => setCutConfirm(null)}
+                    onConfirm={() => {
+                        if (cutConfirm) {
+                            deleteAllLinksForDevice(cutConfirm.id);
+                        }
+                        setCutConfirm(null);
+                    }}
+                    title="Confirm Cut Connections"
+                    message={<>Are you sure you want to delete all connections for <strong>"{cutConfirm.name}"</strong>? This action cannot be undone.</>}
+                    confirmButtonText="Cut Connections"
                     confirmButtonVariant="danger"
                 />
             )}

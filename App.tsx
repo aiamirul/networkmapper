@@ -24,6 +24,7 @@ const App: React.FC = () => {
     topology,
     addTopologyLink,
     deleteTopologyLink,
+    deleteAllLinksForDevice,
     importConfiguration,
     deletedDevices,
     restoreDevice,
@@ -105,6 +106,7 @@ const App: React.FC = () => {
             <MainContent
               view={currentView}
               selectedDevice={selectedDevice}
+              onSelectDevice={handleSelectDevice}
               macFormat={macFormat}
               addConnection={addConnection}
               updateConnection={updateConnection}
@@ -116,6 +118,7 @@ const App: React.FC = () => {
               topology={topology}
               addTopologyLink={addTopologyLink}
               deleteTopologyLink={deleteTopologyLink}
+              deleteAllLinksForDevice={deleteAllLinksForDevice}
               rooms={rooms}
               racks={racks}
               addRoom={addRoom}
