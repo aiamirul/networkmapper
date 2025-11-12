@@ -203,7 +203,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, macFormat,
                     </div>
                 </div>
 
-                {device.type !== DeviceType.CLOUD_SERVER && (
+                {device.uSize > 0 && (
                     <div className="bg-slate-800/50 p-6 rounded-lg">
                         <h3 className="text-lg font-semibold text-slate-200 mb-4">Physical Placement</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -224,7 +224,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, macFormat,
                              <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-slate-400 block mb-1">U Size</label>
-                                    <input type="number" value={device.uSize} onChange={e => updateDevice(device.id, { uSize: parseInt(e.target.value, 10) || 1 })} min="1" className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                                    <input type="number" value={device.uSize} onChange={e => updateDevice(device.id, { uSize: Math.max(0, parseInt(e.target.value, 10) || 0) })} min="0" className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-slate-400 block mb-1">U Position</label>

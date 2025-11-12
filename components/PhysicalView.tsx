@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useCallback } from 'react';
 import { Device, Room, Rack, DevicePlacement, DeviceType } from '../types';
 import { PlusIcon, TrashIcon, ServerIcon, SwitchIcon, RouterIcon, PCIcon, APIcon, PrinterIcon, SettingsIcon, CloudServerIcon, ChevronDownIcon, ChevronUpIcon } from './icons/Icons';
@@ -44,7 +43,7 @@ const DraggableDevice: React.FC<{device: Device, onDragStart: (e: React.DragEven
         draggable
         onDragStart={(e) => onDragStart(e, { id: device.id, uSize: device.uSize, isPlaced: !!device.placement })}
         className={`p-2 bg-slate-700 rounded-md flex items-center gap-2 cursor-grab active:cursor-grabbing ${device.uSize === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-        title={device.uSize === 0 ? "Cloud devices cannot be placed in racks." : device.name}
+        title={device.uSize === 0 ? "0U devices cannot be placed in racks." : device.name}
     >
         <DeviceTypeIcon type={device.type} className="w-4 h-4 text-slate-400 shrink-0"/>
         <span className="text-sm truncate">{device.name} {device.uSize > 0 && `(${device.uSize}U)`}</span>

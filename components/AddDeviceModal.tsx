@@ -68,7 +68,7 @@ export const AddDeviceModal: React.FC<AddDeviceModalProps> = ({ onClose, onAddDe
              {type !== DeviceType.CLOUD_SERVER && (
                 <div>
                     <label htmlFor="uSize" className="block text-sm font-medium text-slate-400 mb-1">U Size</label>
-                    <input type="number" id="uSize" value={uSize} onChange={(e) => setUSize(parseInt(e.target.value, 10) || 1)} min="1" className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" required />
+                    <input type="number" id="uSize" value={uSize} onChange={(e) => setUSize(Math.max(0, parseInt(e.target.value, 10) || 0))} min="0" className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" required />
                 </div>
              )}
             <div>
