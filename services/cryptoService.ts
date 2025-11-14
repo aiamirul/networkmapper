@@ -25,6 +25,9 @@ const b642ab = (b64: string): ArrayBuffer => {
 
 
 const getCryptoKey = async (password: string, salt: string): Promise<CryptoKey> => {
+    if (!window.crypto || !window.crypto.subtle) {
+        throw new Error("Web Crypto API is not available. This feature requires a secure connection (HTTPS).");
+    }
     const enc = new TextEncoder();
     const keyMaterial = await window.crypto.subtle.importKey(
         'raw',

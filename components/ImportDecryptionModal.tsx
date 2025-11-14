@@ -34,7 +34,11 @@ export const ImportDecryptionModal: React.FC<ImportDecryptionModalProps> = ({ on
       }
     } catch (decryptionError) {
       console.error("Decryption failed:", decryptionError);
-      setError("Decryption failed. Please check your passphrase and try again.");
+      if (decryptionError instanceof Error && decryptionError.message.includes("HTTPS")) {
+        setError(decryptionError.message);
+      } else {
+        setError("Decryption failed. Please check your passphrase and try again.");
+      }
     } finally {
       setIsDecrypting(false);
     }

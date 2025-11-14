@@ -1,6 +1,6 @@
 
-import React, { useRef } from 'react';
-import { UploadIcon, DiagramIcon, AlertTriangleIcon } from './icons/Icons';
+import React, { useRef, useState } from 'react';
+import { UploadIcon, DiagramIcon, AlertTriangleIcon, LinkIcon } from './icons/Icons';
 
 interface SetupScreenProps {
     onStartNew: () => void;
@@ -10,6 +10,9 @@ interface SetupScreenProps {
 
 export const SetupScreen: React.FC<SetupScreenProps> = ({ onStartNew, onImportFromFile, initializationError }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [url, setUrl] = useState('');
+    const [isLoadingUrl, setIsLoadingUrl] = useState(false);
+    const [urlError, setUrlError] = useState<string | null>(null);
 
     const handleFileImportClick = () => {
         fileInputRef.current?.click();
@@ -24,13 +27,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ onStartNew, onImportFr
                     const result = e.target?.result;
                     if (typeof result === 'string') {
                         const parsedData = JSON.parse(result);
-                        if (parsedData.salt && typeof parsedData.data === 'string') {
-                            alert("Encrypted files are not supported during initial setup. Please start with a demo or a plain JSON file, then import the encrypted file from the main application settings.");
-                        } else if (Array.isArray(parsedData.devices) && Array.isArray(parsedData.topology)) {
-                            onImportFromFile(parsedData);
-                        } else {
-                            throw new Error('Invalid or unrecognized configuration file format.');
-                        }
+                        onImportFromFile(parsedData);
+                    } else {
+                        throw new Error("Could not read file content.");
                     }
                 } catch (error) {
                     alert(`Failed to import configuration: ${error instanceof Error ? error.message : String(error)}`);
@@ -44,6 +43,35 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ onStartNew, onImportFr
             };
         }
     };
+
+    const handleUrlImport = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!url.trim()) {
+            setUrlError("Please enter a valid URL.");
+            return;
+        }
+
+        setIsLoadingUrl(true);
+        setUrlError(null);
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch from URL (${response.status}): ${response.statusText}`);
+            }
+            const data = await response.json();
+            onImportFromFile(data);
+        } catch (error) {
+             if (error instanceof TypeError) { // This often indicates a network or CORS error
+                setUrlError("Network error or CORS issue. Please check the URL and browser console.");
+            } else {
+                setUrlError(error instanceof Error ? error.message : "An unknown error occurred.");
+            }
+        } finally {
+            setIsLoadingUrl(false);
+        }
+    };
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
@@ -78,6 +106,43 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ onStartNew, onImportFr
                         <p className="text-slate-400">Load your existing network configuration from an unencrypted JSON file.</p>
                     </button>
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
+                </div>
+
+                <div className="mt-8 pt-8 border-t border-slate-700/50">
+                     <h3 className="text-xl text-slate-400 mb-4">Or Load from a URL</h3>
+                     <form onSubmit={handleUrlImport} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 max-w-lg mx-auto">
+                        <div className="relative flex-grow w-full">
+                            <input
+                                type="url"
+                                value={url}
+                                onChange={(e) => { setUrl(e.target.value); setUrlError(null); }}
+                                placeholder="https://example.com/config.json"
+                                className="w-full bg-slate-700/50 border border-slate-600 rounded-md pl-10 pr-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                required
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <LinkIcon className="w-5 h-5 text-slate-400" />
+                            </div>
+                        </div>
+                        <button 
+                            type="submit" 
+                            disabled={isLoadingUrl}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-3 rounded-md font-semibold transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed shrink-0"
+                        >
+                            {isLoadingUrl ? (
+                                <>
+                                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Loading...
+                                </>
+                            ) : 'Load from URL'}
+                        </button>
+                     </form>
+                     {urlError && (
+                        <p className="text-red-400 mt-3 text-sm">{urlError}</p>
+                     )}
                 </div>
             </div>
         </div>

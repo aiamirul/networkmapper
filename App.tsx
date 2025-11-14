@@ -11,6 +11,7 @@ import { formatMac } from './utils/macFormatter';
 import { SettingsModal } from './components/SettingsModal';
 import { RecycleBinModal } from './components/RecycleBinModal';
 import { SetupScreen } from './components/SetupScreen';
+import { ImportDecryptionModal } from './components/ImportDecryptionModal';
 
 const App: React.FC = () => {
   const {
@@ -55,6 +56,10 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [initializationError, setInitializationError] = useState<string | null>(null);
 
+  const [isInitialDecryptModalOpen, setInitialDecryptModalOpen] = useState(false);
+  const [pendingEncryptedConfig, setPendingEncryptedConfig] = useState<any>(null);
+
+
   const handleStartNew = useCallback(() => {
     importConfiguration({
         devices: [],
@@ -68,12 +73,19 @@ const App: React.FC = () => {
 
   const handleImportFromFile = useCallback((config: any) => {
       try {
-          if (config && Array.isArray(config.devices) && Array.isArray(config.topology)) {
+          // Check for encrypted format first
+          if (config && config.salt && typeof config.data === 'string') {
+              setPendingEncryptedConfig(config);
+              setInitialDecryptModalOpen(true);
+              setInitializationError(null);
+          }
+          // Check for plain format
+          else if (config && Array.isArray(config.devices) && Array.isArray(config.topology)) {
               importConfiguration(config);
               setIsInitialized(true);
               setInitializationError(null);
           } else {
-              throw new Error("Invalid configuration file format.");
+              throw new Error("Invalid or unrecognized configuration file format.");
           }
       } catch (error) {
           setInitializationError(error instanceof Error ? error.message : "Failed to import file.");
@@ -98,8 +110,6 @@ const App: React.FC = () => {
               const localState = localStorage.getItem('networkState');
               if (localState) {
                   setIsInitialized(true);
-              } else {
-                  setIsInitialized(false);
               }
           }
       } catch (error) {
@@ -112,6 +122,19 @@ const App: React.FC = () => {
   
     initializeApp();
   }, [handleImportFromFile]);
+
+  const handleInitialDecryptionSuccess = useCallback((decryptedConfig: any) => {
+      importConfiguration(decryptedConfig);
+      setIsInitialized(true);
+      setInitialDecryptModalOpen(false);
+      setPendingEncryptedConfig(null);
+  }, [importConfiguration]);
+
+  const handleInitialDecryptionClose = useCallback(() => {
+      setInitialDecryptModalOpen(false);
+      setPendingEncryptedConfig(null);
+      setIsInitialized(false);
+  }, []);
 
   const selectedDevice = devices.find(d => d.id === selectedDeviceId) || null;
 
@@ -149,6 +172,18 @@ const App: React.FC = () => {
             <p>Initializing NetDiagram AI...</p>
         </div>
     );
+  }
+
+  if (isInitialDecryptModalOpen && pendingEncryptedConfig) {
+      return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
+                <ImportDecryptionModal
+                  onClose={handleInitialDecryptionClose}
+                  encryptedData={pendingEncryptedConfig}
+                  onSuccess={handleInitialDecryptionSuccess}
+              />
+          </div>
+      );
   }
 
   if (!isInitialized) {
