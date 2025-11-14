@@ -55,10 +55,16 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [initializationError, setInitializationError] = useState<string | null>(null);
 
-  const handleStartWithDemo = useCallback(() => {
+  const handleStartNew = useCallback(() => {
+    importConfiguration({
+        devices: [],
+        topology: [],
+        rooms: [],
+        racks: [],
+    });
     setIsInitialized(true);
     setInitializationError(null);
-  }, []);
+  }, [importConfiguration]);
 
   const handleImportFromFile = useCallback((config: any) => {
       try {
@@ -148,7 +154,7 @@ const App: React.FC = () => {
   if (!isInitialized) {
     return (
         <SetupScreen 
-            onStartWithDemo={handleStartWithDemo}
+            onStartNew={handleStartNew}
             onImportFromFile={handleImportFromFile}
             initializationError={initializationError}
         />

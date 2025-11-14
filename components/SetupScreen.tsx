@@ -3,12 +3,12 @@ import React, { useRef } from 'react';
 import { UploadIcon, DiagramIcon, AlertTriangleIcon } from './icons/Icons';
 
 interface SetupScreenProps {
-    onStartWithDemo: () => void;
+    onStartNew: () => void;
     onImportFromFile: (config: any) => void;
     initializationError: string | null;
 }
 
-export const SetupScreen: React.FC<SetupScreenProps> = ({ onStartWithDemo, onImportFromFile, initializationError }) => {
+export const SetupScreen: React.FC<SetupScreenProps> = ({ onStartNew, onImportFromFile, initializationError }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileImportClick = () => {
@@ -66,10 +66,10 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ onStartWithDemo, onImp
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <button onClick={onStartWithDemo} className="group bg-slate-800 p-8 rounded-lg border border-slate-700 hover:border-cyan-500 hover:bg-slate-700/50 transition-all duration-300 text-left">
+                    <button onClick={onStartNew} className="group bg-slate-800 p-8 rounded-lg border border-slate-700 hover:border-cyan-500 hover:bg-slate-700/50 transition-all duration-300 text-left">
                         <DiagramIcon className="w-10 h-10 mb-4 text-cyan-500" />
-                        <h2 className="text-xl font-semibold text-slate-100 mb-2">Start with Demo</h2>
-                        <p className="text-slate-400">Explore the app's features with a pre-populated sample network diagram.</p>
+                        <h2 className="text-xl font-semibold text-slate-100 mb-2">Start New Project</h2>
+                        <p className="text-slate-400">Begin with a blank canvas and build your network diagram from scratch.</p>
                     </button>
 
                     <button onClick={handleFileImportClick} className="group bg-slate-800 p-8 rounded-lg border border-slate-700 hover:border-cyan-500 hover:bg-slate-700/50 transition-all duration-300 text-left">

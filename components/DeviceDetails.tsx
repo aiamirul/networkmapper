@@ -82,7 +82,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, macFormat,
     }, [device]);
 
     const handlePlacementUpdate = () => {
-        if (placementRoomId && placementRackId) {
+        if (placementRoomId && placementRackId && device.uSize > 0) {
             updateDevicePlacement(device.id, {
                 roomId: placementRoomId,
                 rackId: placementRackId,
@@ -203,41 +203,44 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, macFormat,
                     </div>
                 </div>
 
-                {device.uSize > 0 && (
-                    <div className="bg-slate-800/50 p-6 rounded-lg">
-                        <h3 className="text-lg font-semibold text-slate-200 mb-4">Physical Placement</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm font-medium text-slate-400 block mb-1">Room</label>
-                                <select value={placementRoomId} onChange={e => { setPlacementRoomId(e.target.value); setPlacementRackId(''); }} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                                    <option value="">-- Unassigned --</option>
-                                    {rooms.map(room => <option key={room.id} value={room.id}>{room.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-slate-400 block mb-1">Rack</label>
-                                <select value={placementRackId} onChange={e => setPlacementRackId(e.target.value)} disabled={!placementRoomId} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50">
-                                    <option value="">-- Select Rack --</option>
-                                    {racks.filter(r => r.roomId === placementRoomId).map(rack => <option key={rack.id} value={rack.id}>{rack.name}</option>)}
-                                </select>
-                            </div>
-                             <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-slate-400 block mb-1">U Size</label>
-                                    <input type="number" value={device.uSize} onChange={e => updateDevice(device.id, { uSize: Math.max(0, parseInt(e.target.value, 10) || 0) })} min="0" className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-slate-400 block mb-1">U Position</label>
-                                    <input type="number" value={placementUPosition} onChange={e => setPlacementUPosition(parseInt(e.target.value, 10) || 1)} min="1" disabled={!placementRackId} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50" />
-                                </div>
-                            </div>
+                <div className="bg-slate-800/50 p-6 rounded-lg">
+                    <h3 className="text-lg font-semibold text-slate-200 mb-4">Physical Placement</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-medium text-slate-400 block mb-1">Room</label>
+                            <select value={placementRoomId} onChange={e => { setPlacementRoomId(e.target.value); setPlacementRackId(''); }} disabled={device.uSize === 0} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50">
+                                <option value="">-- Unassigned --</option>
+                                {rooms.map(room => <option key={room.id} value={room.id}>{room.name}</option>)}
+                            </select>
                         </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                            <button onClick={handleUnassignPlacement} className="px-4 py-2 rounded-md text-sm font-semibold bg-slate-700 hover:bg-slate-600 transition-colors">Unassign</button>
-                            <button onClick={handlePlacementUpdate} disabled={!placementRackId} className="px-4 py-2 rounded-md text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Update Placement</button>
+                        <div>
+                            <label className="text-sm font-medium text-slate-400 block mb-1">Rack</label>
+                            <select value={placementRackId} onChange={e => setPlacementRackId(e.target.value)} disabled={!placementRoomId || device.uSize === 0} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50">
+                                <option value="">-- Select Rack --</option>
+                                {racks.filter(r => r.roomId === placementRoomId).map(rack => <option key={rack.id} value={rack.id}>{rack.name}</option>)}
+                            </select>
+                        </div>
+                            <div className="grid grid-cols-2 gap-4 md:col-span-2">
+                            <div>
+                                <label className="text-sm font-medium text-slate-400 block mb-1">U Size</label>
+                                <input type="number" value={device.uSize} onChange={e => updateDevice(device.id, { uSize: Math.max(0, parseInt(e.target.value, 10) || 0) })} min="0" className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-400 block mb-1">U Position</label>
+                                <input type="number" value={placementUPosition} onChange={e => setPlacementUPosition(parseInt(e.target.value, 10) || 1)} min="1" disabled={!placementRackId || device.uSize === 0} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50" />
+                            </div>
                         </div>
                     </div>
-                )}
+                    {device.uSize === 0 && (
+                        <p className="text-xs text-slate-500 mt-4">
+                            Rack placement is disabled for 0U devices. Increase U Size to enable placement.
+                        </p>
+                    )}
+                    <div className="flex justify-end gap-2 mt-4">
+                        <button onClick={handleUnassignPlacement} disabled={!device.placement} className="px-4 py-2 rounded-md text-sm font-semibold bg-slate-700 hover:bg-slate-600 transition-colors disabled:opacity-50">Unassign</button>
+                        <button onClick={handlePlacementUpdate} disabled={!placementRackId || device.uSize === 0} className="px-4 py-2 rounded-md text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Update Placement</button>
+                    </div>
+                </div>
 
                 <div className="bg-slate-800/50 p-6 rounded-lg">
                     <h3 className="text-lg font-semibold text-slate-200 mb-4">Device Key / Config File</h3>
