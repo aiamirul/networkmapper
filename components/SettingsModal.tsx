@@ -13,7 +13,6 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkState, importConfiguration }) => {
   const [serverUrl, setServerUrl] = useState<string>(() => localStorage.getItem('netdiagram_serverUrl') || 'https://shabpltsystem.com/app/networkmap/core.php');
   const [username, setUsername] = useState<string>(() => localStorage.getItem('netdiagram_username') || '');
-  const [salt, setSalt] = useState<string>(() => localStorage.getItem('netdiagram_salt') || '');
   const [passphrase, setPassphrase] = useState<string>('');
   
   const [configs, setConfigs] = useState<RemoteConfig[]>([]);
@@ -28,10 +27,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
   useEffect(() => {
     localStorage.setItem('netdiagram_username', username);
   }, [username]);
-
-  useEffect(() => {
-    localStorage.setItem('netdiagram_salt', salt);
-  }, [salt]);
 
   const handleFetchConfigs = useCallback(async () => {
     if (!serverUrl || !username) {
@@ -56,16 +51,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
   }, [handleFetchConfigs]);
 
   const handleSave = async () => {
-    if (!serverUrl || !passphrase || !salt || !username) {
-      setError("Server URL, Username, Passphrase, and Salt are required to save.");
+    if (!serverUrl || !passphrase || !username) {
+      setError("Server URL, Username, and Passphrase are required to save.");
       return;
     }
     setIsLoading(true);
     setError(null);
     setStatus('Encrypting configuration...');
     try {
-      const { nonce, ciphertext } = await encryptForRemote(networkState, passphrase, salt);
-      const payload = { salt, nonce, ciphertext };
+      const saltBytes = window.crypto.getRandomValues(new Uint8Array(16));
+      const newSalt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
+      const { nonce, ciphertext } = await encryptForRemote(networkState, passphrase, newSalt);
+      const payload = { salt: newSalt, nonce, ciphertext };
       
       setStatus('Saving to server...');
       await saveRemoteConfig(serverUrl, username, payload);
@@ -129,15 +127,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
                         <label htmlFor="serverUrl" className="block text-sm font-medium text-slate-400 mb-1">Server URL</label>
                         <input type="text" id="serverUrl" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="https://api.example.com/configs" />
                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="username" className="block text-sm font-medium text-slate-400 mb-1">Username</label>
-                            <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Your username for storage" />
-                        </div>
-                        <div>
-                            <label htmlFor="salt" className="block text-sm font-medium text-slate-400 mb-1">Encryption Salt (for saving)</label>
-                            <input type="text" id="salt" value={salt} onChange={(e) => setSalt(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="A random string" />
-                        </div>
+                    <div>
+                        <label htmlFor="username" className="block text-sm font-medium text-slate-400 mb-1">Username</label>
+                        <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-slate-700/50 border border-slate-600 rounded-md px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Your username for storage" />
                     </div>
                      <div>
                         <label htmlFor="passphrase" className="block text-sm font-medium text-slate-400 mb-1">Passphrase</label>
@@ -154,7 +146,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
                            <RefreshIcon className={`w-5 h-5 text-slate-300 ${isLoading ? 'animate-spin' : ''}`} />
                         </button>
                     </div>
-                    <button onClick={handleSave} disabled={isLoading || !passphrase || !serverUrl || !salt || !username} className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-md font-semibold text-sm transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">
+                    <button onClick={handleSave} disabled={isLoading || !passphrase || !serverUrl || !username} className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-md font-semibold text-sm transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">
                         <UploadIcon className="w-4 h-4" /> Save Current to Server
                     </button>
                 </div>

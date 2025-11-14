@@ -57,8 +57,8 @@ export const getNetworkAnalysis = async (networkState: object): Promise<string> 
             model: model,
             contents: prompt
         });
-        // FIX: The response from the Gemini API includes a `text()` method to extract the string content. Accessing it as a property is incorrect and was causing a downstream error.
-        return response.text();
+        // FIX: The response from the Gemini API includes a `text` property to extract the string content, not a method.
+        return response.text;
     } catch (error) {
         console.error("Error fetching network analysis from Gemini:", error);
         return "An error occurred while analyzing the network. Please check the console for details.";
