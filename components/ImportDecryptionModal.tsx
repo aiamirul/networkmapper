@@ -28,7 +28,6 @@ export const ImportDecryptionModal: React.FC<ImportDecryptionModalProps> = ({ on
       const decryptedData = await decryptData(encryptedData.data, passphrase, encryptedData.salt);
       if (Array.isArray(decryptedData.devices) && Array.isArray(decryptedData.topology)) {
         onSuccess(decryptedData);
-        onClose();
       } else {
         throw new Error('Decrypted data is not in the expected format.');
       }

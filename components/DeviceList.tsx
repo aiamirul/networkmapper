@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink, View, Room, Rack, MacFormat } from '../types';
-import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon, TrashIcon, ViewGridIcon, CloudServerIcon } from './icons/Icons';
+import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon, TrashIcon, ViewGridIcon, CloudServerIcon, LinkIcon } from './icons/Icons';
 import { ExportEncryptionModal } from './ExportEncryptionModal';
 import { ImportDecryptionModal } from './ImportDecryptionModal';
+import { UrlImportModal } from './UrlImportModal';
 import { formatMac } from '../utils/macFormatter';
 
 interface DeviceListProps {
@@ -49,6 +50,7 @@ const DeviceIcon = ({ type }: { type: DeviceType }) => {
 export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms, racks, importConfiguration, onSelectDevice, selectedDeviceId, onAddDevice, currentView, setCurrentView, searchQuery, setSearchQuery, onPrint, onOpenRecycleBin }) => {
   const [isExportEncryptModalOpen, setExportEncryptModalOpen] = useState(false);
   const [isImportDecryptModalOpen, setImportDecryptModalOpen] = useState(false);
+  const [isUrlImportModalOpen, setUrlImportModalOpen] = useState(false);
   const [encryptedConfigToImport, setEncryptedConfigToImport] = useState<{ salt: string; data: string } | null>(null);
   const [isActionsMenuOpen, setActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -142,6 +144,26 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms
     document.body.removeChild(link);
     setActionsMenuOpen(false);
   };
+  
+  const processImportedConfig = (parsedData: any) => {
+    try {
+        if (parsedData.salt && typeof parsedData.data === 'string') {
+            setEncryptedConfigToImport(parsedData);
+            setImportDecryptModalOpen(true);
+        } 
+        else if (Array.isArray(parsedData.devices) && Array.isArray(parsedData.topology)) {
+            importConfiguration(parsedData);
+            alert('Configuration imported successfully!');
+        } 
+        else {
+            throw new Error('Invalid or unrecognized configuration file format.');
+        }
+    } catch (error) {
+        console.error("Failed to process configuration:", error);
+        alert(`Failed to import configuration. Please check the data format and console for details. Error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const fileReader = new FileReader();
@@ -152,22 +174,11 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms
                 const result = e.target?.result;
                 if (typeof result === 'string') {
                     const parsedData = JSON.parse(result);
-                    
-                    if (parsedData.salt && typeof parsedData.data === 'string') {
-                        setEncryptedConfigToImport(parsedData);
-                        setImportDecryptModalOpen(true);
-                    } 
-                    else if (Array.isArray(parsedData.devices) && Array.isArray(parsedData.topology)) {
-                        importConfiguration(parsedData);
-                        alert('Configuration imported successfully!');
-                    } 
-                    else {
-                        throw new Error('Invalid or unrecognized configuration file format.');
-                    }
+                    processImportedConfig(parsedData);
                 }
             } catch (error) {
-                console.error("Failed to import configuration:", error);
-                alert(`Failed to import configuration. Please check the file format and console for details. Error: ${error instanceof Error ? error.message : String(error)}`);
+                console.error("Failed to parse imported file:", error);
+                alert(`Failed to parse imported file. Please ensure it's a valid JSON. Error: ${error instanceof Error ? error.message : String(error)}`);
             } finally {
                 if(event.target) event.target.value = '';
                 setActionsMenuOpen(false);
@@ -178,6 +189,11 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms
             alert("Error reading the selected file.");
         };
     }
+  };
+  
+  const handleUrlConfigLoaded = (config: any) => {
+      processImportedConfig(config);
+      setUrlImportModalOpen(false);
   };
 
   const filteredDevices = devices.filter(device =>
@@ -204,9 +220,15 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms
                           <li>
                               <label htmlFor="import-json" className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-600 cursor-pointer">
                                   <UploadIcon className="w-5 h-5" />
-                                  <span>Import from JSON</span>
+                                  <span>Import from File</span>
                               </label>
                               <input type="file" id="import-json" className="hidden" accept=".json" onChange={handleImport} />
+                          </li>
+                          <li>
+                            <button onClick={() => { setUrlImportModalOpen(true); setActionsMenuOpen(false); }} className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-600">
+                                <LinkIcon className="w-5 h-5" />
+                                <span>Import from URL</span>
+                            </button>
                           </li>
                           <li>
                               <button onClick={handleExport} className="flex items-center gap-3 w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-600">
@@ -329,7 +351,15 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms
           onSuccess={(decryptedConfig) => {
             importConfiguration(decryptedConfig);
             alert('Encrypted configuration imported successfully!');
+            setImportDecryptModalOpen(false);
+            setEncryptedConfigToImport(null);
           }}
+        />
+      )}
+      {isUrlImportModalOpen && (
+        <UrlImportModal
+            onClose={() => setUrlImportModalOpen(false)}
+            onConfigLoaded={handleUrlConfigLoaded}
         />
       )}
     </>
