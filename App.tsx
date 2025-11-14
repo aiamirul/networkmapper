@@ -12,6 +12,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { RecycleBinModal } from './components/RecycleBinModal';
 import { SetupScreen } from './components/SetupScreen';
 import { ImportDecryptionModal } from './components/ImportDecryptionModal';
+import { ChevronLeftIcon, ChevronRightIcon } from './components/icons/Icons';
 
 const App: React.FC = () => {
   const {
@@ -51,6 +52,7 @@ const App: React.FC = () => {
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [isRecycleBinOpen, setRecycleBinOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSidebarVisible, setSidebarVisible] = useState(true);
 
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -205,24 +207,34 @@ const App: React.FC = () => {
           onAnalyzeClick={() => setAnalysisModalOpen(true)}
           onOpenSettings={() => setSettingsModalOpen(true)}
         />
-        <main className="flex flex-col md:flex-row h-[calc(100vh-64px)]">
-          <aside className="w-full md:w-80 lg:w-96 bg-slate-900/30 border-r border-slate-700/50 p-4 overflow-y-auto shrink-0">
-            <DeviceList
-              devices={devices}
-              topology={topology}
-              rooms={rooms}
-              racks={racks}
-              importConfiguration={importConfiguration}
-              onSelectDevice={handleSelectDevice}
-              selectedDeviceId={selectedDeviceId}
-              onAddDevice={() => setAddDeviceModalOpen(true)}
-              currentView={currentView}
-              setCurrentView={handleSetView}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onPrint={handlePrint}
-              onOpenRecycleBin={() => setRecycleBinOpen(true)}
-            />
+        <main className="relative flex flex-col md:flex-row h-[calc(100vh-64px)] md:overflow-x-hidden">
+            <button
+                onClick={() => setSidebarVisible(!isSidebarVisible)}
+                className={`hidden md:flex items-center justify-center absolute top-1/2 z-20 bg-slate-800 hover:bg-cyan-600 text-slate-200 border border-slate-600 w-8 h-8 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isSidebarVisible ? 'left-80 lg:left-96' : 'left-4'}`}
+                style={{ transform: `translateX(-50%) translateY(-50%)` }}
+                title={isSidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}
+            >
+                {isSidebarVisible ? <ChevronLeftIcon className="w-5 h-5" /> : <ChevronRightIcon className="w-5 h-5" />}
+            </button>
+          <aside className={`w-full md:w-80 lg:w-96 bg-slate-900/30 border-r border-slate-700/50 p-4 overflow-y-auto shrink-0 transition-all duration-300 ease-in-out ${!isSidebarVisible && 'md:-ml-80 lg:-ml-96'}`}>
+            <div className="h-full">
+                <DeviceList
+                  devices={devices}
+                  topology={topology}
+                  rooms={rooms}
+                  racks={racks}
+                  importConfiguration={importConfiguration}
+                  onSelectDevice={handleSelectDevice}
+                  selectedDeviceId={selectedDeviceId}
+                  onAddDevice={() => setAddDeviceModalOpen(true)}
+                  currentView={currentView}
+                  setCurrentView={handleSetView}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  onPrint={handlePrint}
+                  onOpenRecycleBin={() => setRecycleBinOpen(true)}
+                />
+            </div>
           </aside>
           <section className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto">
             <MainContent
