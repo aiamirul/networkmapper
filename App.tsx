@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Header } from './components/Header';
 import { DeviceList } from './components/DeviceList';
 import { MainContent } from './components/MainContent';
@@ -10,6 +10,7 @@ import { MacFormat, View } from './types';
 import { formatMac } from './utils/macFormatter';
 import { SettingsModal } from './components/SettingsModal';
 import { RecycleBinModal } from './components/RecycleBinModal';
+import { SetupScreen } from './components/SetupScreen';
 
 const App: React.FC = () => {
   const {
@@ -50,6 +51,62 @@ const App: React.FC = () => {
   const [isRecycleBinOpen, setRecycleBinOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
+
+  const handleStartWithDemo = useCallback(() => {
+    setIsInitialized(true);
+    setInitializationError(null);
+  }, []);
+
+  const handleImportFromFile = useCallback((config: any) => {
+      try {
+          if (config && Array.isArray(config.devices) && Array.isArray(config.topology)) {
+              importConfiguration(config);
+              setIsInitialized(true);
+              setInitializationError(null);
+          } else {
+              throw new Error("Invalid configuration file format.");
+          }
+      } catch (error) {
+          setInitializationError(error instanceof Error ? error.message : "Failed to import file.");
+          setIsInitialized(false);
+      }
+  }, [importConfiguration]);
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const jsonSourceUrl = urlParams.get('json_source');
+  
+          if (jsonSourceUrl) {
+              const response = await fetch(jsonSourceUrl);
+              if (!response.ok) {
+                  throw new Error(`Failed to fetch from URL (${response.status}): ${response.statusText}`);
+              }
+              const data = await response.json();
+              handleImportFromFile(data);
+          } else {
+              const localState = localStorage.getItem('networkState');
+              if (localState) {
+                  setIsInitialized(true);
+              } else {
+                  setIsInitialized(false);
+              }
+          }
+      } catch (error) {
+          setInitializationError(error instanceof Error ? error.message : "An unknown error occurred during initialization.");
+          setIsInitialized(false);
+      } finally {
+          setIsLoading(false);
+      }
+    };
+  
+    initializeApp();
+  }, [handleImportFromFile]);
+
   const selectedDevice = devices.find(d => d.id === selectedDeviceId) || null;
 
   const handleSelectDevice = useCallback((id: string | null) => {
@@ -75,6 +132,28 @@ const App: React.FC = () => {
   const handlePrint = () => {
     window.print();
   };
+
+  if (isLoading) {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center text-slate-400">
+            <svg className="animate-spin h-10 w-10 text-cyan-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p>Initializing NetDiagram AI...</p>
+        </div>
+    );
+  }
+
+  if (!isInitialized) {
+    return (
+        <SetupScreen 
+            onStartWithDemo={handleStartWithDemo}
+            onImportFromFile={handleImportFromFile}
+            initializationError={initializationError}
+        />
+    );
+  }
 
   return (
     <>
