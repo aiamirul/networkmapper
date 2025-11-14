@@ -32,7 +32,7 @@ export const UrlImportModal: React.FC<UrlImportModalProps> = ({ onClose, onConfi
       onClose();
     } catch (err) {
       if (err instanceof TypeError) { // Network or CORS error
-        setError("Network error or CORS issue. Please check the URL and browser console.");
+        setError("Network error or CORS issue. This is a security feature of your browser. The server at the provided URL needs to be configured to allow requests from this application (CORS).");
       } else {
         setError(err instanceof Error ? err.message : "An unknown error occurred.");
       }

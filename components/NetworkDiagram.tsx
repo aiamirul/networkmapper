@@ -228,10 +228,11 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
                 parent.append("g")
                     .html(getDeviceIconSvg(d.device.type))
                     .attr("color", "#e2e8f0")
-                    .style("opacity", d_from_style => {
+                    // FIX: Using the datum 'd' from the outer 'on("error")' scope to ensure correct data is used, as suggested by the 'FIX' comment.
+                    .style("opacity", () => {
                         // FIX: Pass 'd' to isSearched call.
-                        if(topologySearchQuery) return isSearched(d_from_style as D3Node) ? 1 : 0.3;
-                        return linkedDeviceIds.has((d_from_style as D3Node).id) ? 1 : 0.7;
+                        if(topologySearchQuery) return isSearched(d) ? 1 : 0.3;
+                        return linkedDeviceIds.has(d.id) ? 1 : 0.7;
                     });
             });
         
