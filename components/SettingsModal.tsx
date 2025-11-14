@@ -11,7 +11,7 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkState, importConfiguration }) => {
-  const [serverUrl, setServerUrl] = useState<string>(() => localStorage.getItem('netdiagram_serverUrl') || 'https://shabpltsystem.com/app/networkmap/networkmap.php');
+  const [serverUrl, setServerUrl] = useState<string>(() => localStorage.getItem('netdiagram_serverUrl') || 'https://shabpltsystem.com/app/networkmap/core.php');
   const [username, setUsername] = useState<string>(() => localStorage.getItem('netdiagram_username') || '');
   const [salt, setSalt] = useState<string>(() => localStorage.getItem('netdiagram_salt') || '');
   const [passphrase, setPassphrase] = useState<string>('');

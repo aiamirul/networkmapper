@@ -31,9 +31,26 @@ export const fetchRemoteConfigs = async (serverUrl: string, username: string): P
         throw new Error(`Server responded with status: ${response.status}`);
     }
     const data = await response.json();
-    if (data && Array.isArray(data.records)) {
-        return data.records;
+    
+    if (data && data.success === true && Array.isArray(data.records)) {
+        return data.records
+            .map((record: any): RemoteConfig | null => {
+                if (record && record.date && record.content && record.content.data) {
+                    return {
+                        date: record.date,
+                        data: record.content.data,
+                    };
+                }
+                console.warn('Skipping malformed record from API:', record);
+                return null;
+            })
+            .filter((item: RemoteConfig | null): item is RemoteConfig => item !== null);
     }
+
+    if (data && data.hasOwnProperty('success') && !data.success) {
+        throw new Error(data.message || 'Server returned an error.');
+    }
+    
     throw new Error('Invalid data format from server.');
 };
 
