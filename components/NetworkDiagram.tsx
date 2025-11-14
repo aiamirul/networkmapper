@@ -61,7 +61,7 @@ const getDeviceIconSvg = (type: DeviceType): string => {
         [DeviceType.CLOUD_SERVER]: `<path d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.5 4.5 0 002.25 15z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
         [DeviceType.AP]: `<path d="M12 5c3.866 0 7 1.79 7 4m-14 0c0-2.21 3.134-4 7-4m-9 8h2m14 0h2m-10-4a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
         [DeviceType.PRINTER]: `<path d="M8.625 15.375v4.5m6.75-4.5v4.5m-10.5-9h14.25v-6a1 1 0 0 0-1-1H6.375a1 1 0 0 0-1 1v6Zm0 0h14.25m-14.25 0a2 2 0 0 0-2 2v4.5a1 1 0 0 0 1 1h16.25a1 1 0 0 0 1-1v-4.5a2 2 0 0 0-2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
-        [DeviceType.OTHER]: `<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
+        [DeviceType.OTHER]: `<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`,
     };
 
     const path = paths[type] || paths[DeviceType.SWITCH];
@@ -217,13 +217,15 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
                 return linkedDeviceIds.has(d.id) ? 1 : 0.7;
             })
             // FIX: Cast this.parentNode to Element to satisfy d3.select's type requirements.
-            .on("error", function(event, d) {
+            .on("error", function(event, d_unknown) {
+                // FIX: Cast datum from unknown to D3Node to safely access properties.
+                const d = d_unknown as D3Node;
                 const parent = d3.select(this.parentNode as Element);
                 d3.select(this).remove();
                 parent.append("g")
                     .html(getDeviceIconSvg(d.device.type))
                     .attr("color", "#e2e8f0")
-                    .style("opacity", d => {
+                    .style("opacity", () => {
                         if(topologySearchQuery) return isSearched(d) ? 1 : 0.3;
                         return linkedDeviceIds.has(d.id) ? 1 : 0.7;
                     });
@@ -248,12 +250,16 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
             .text(d => d.device.name);
         
         // FIX: Explicitly typed the datum 'd' to D3Node to fix type inference issues.
-        node.on("click", (event, d: D3Node) => {
+        node.on("click", (event, d_unknown) => {
+            // FIX: Cast datum from unknown to D3Node to safely access properties.
+            const d = d_unknown as D3Node;
             if (linking) {
                 addTopologyLink(linking, d.id);
                 setLinking(null);
             }
-        }).on("dblclick", (event, d: D3Node) => {
+        }).on("dblclick", (event, d_unknown) => {
+            // FIX: Cast datum from unknown to D3Node to safely access properties.
+            const d = d_unknown as D3Node;
             event.preventDefault();
             simulation.alphaTarget(0);
             d.fx = d.x ?? null;
@@ -270,7 +276,11 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
                 .attr("x2", d => (d.target as D3Node).x ?? 0)
                 .attr("y2", d => (d.target as D3Node).y ?? 0);
 
-            node.attr("transform", d => `translate(${d.x}, ${d.y})`);
+            node.attr("transform", d_unknown => {
+                // FIX: Cast datum from unknown to D3Node and add nullish coalescing for safety.
+                const d = d_unknown as D3Node;
+                return `translate(${d.x ?? 0}, ${d.y ?? 0})`;
+            });
         }
 
         // FIX: Updated drag handler signatures to use D3Node type.
@@ -389,7 +399,12 @@ export const NetworkDiagram: React.FC<NetworkDiagramProps> = ({ devices, topolog
                 style={{ top: menuData.y, left: menuData.x }}
                 className="absolute z-30 bg-slate-700 rounded-md shadow-lg border border-slate-600 w-52"
             >
-                <div className="p-2 font-semibold text-slate-200 border-b border-slate-600 truncate">{deviceName}</div>
+                <div className="p-2 flex justify-between items-center font-semibold text-slate-200 border-b border-slate-600">
+                    <span className="truncate pr-2" title={deviceName}>{deviceName}</span>
+                    <button onClick={closeAllMenus} className="p-1 -mr-1 rounded-full hover:bg-slate-600 transition-colors" title="Close">
+                        <XIcon className="w-4 h-4 text-slate-400" />
+                    </button>
+                </div>
                 <ul className="py-1">
                     {/* View Device */}
                     <li>
