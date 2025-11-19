@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { Header } from './components/Header';
 import { DeviceList } from './components/DeviceList';
@@ -13,6 +12,7 @@ import { RecycleBinModal } from './components/RecycleBinModal';
 import { SetupScreen } from './components/SetupScreen';
 import { ImportDecryptionModal } from './components/ImportDecryptionModal';
 import { ChevronLeftIcon, ChevronRightIcon } from './components/icons/Icons';
+import { ViewNavigator } from './components/ViewNavigator';
 
 const App: React.FC = () => {
   const {
@@ -53,6 +53,7 @@ const App: React.FC = () => {
   const [isRecycleBinOpen, setRecycleBinOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarVisible, setSidebarVisible] = useState(true);
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -75,8 +76,8 @@ const App: React.FC = () => {
 
   const handleImportFromFile = useCallback((config: any) => {
       try {
-          // Check for encrypted format first
-          if (config && config.salt && typeof config.data === 'string') {
+          // Check for encrypted format (local file or remote)
+          if (config && config.salt && (typeof config.data === 'string' || (config.nonce && config.ciphertext))) {
               setPendingEncryptedConfig(config);
               setInitialDecryptModalOpen(true);
               setInitializationError(null);
@@ -145,6 +146,7 @@ const App: React.FC = () => {
     if (id) {
       setCurrentView(View.DEVICE_DETAILS);
     }
+    setMobileMenuOpen(false);
   }, []);
   
   const handleSetView = (view: View) => {
@@ -200,14 +202,22 @@ const App: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 font-sans text-slate-300 no-print">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 font-sans text-slate-300 no-print flex flex-col">
         <Header 
           macFormat={macFormat} 
           setMacFormat={setMacFormat} 
           onAnalyzeClick={() => setAnalysisModalOpen(true)}
           onOpenSettings={() => setSettingsModalOpen(true)}
+          onToggleMobileMenu={() => setMobileMenuOpen(prev => !prev)}
         />
-        <main className="relative flex flex-col md:flex-row h-[calc(100vh-64px)] md:overflow-x-hidden">
+        <main className="relative flex flex-row flex-grow overflow-hidden">
+            {isMobileMenuOpen && (
+                <div 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="fixed inset-0 bg-black/60 z-20 md:hidden"
+                    aria-hidden="true"
+                />
+            )}
             <button
                 onClick={() => setSidebarVisible(!isSidebarVisible)}
                 className={`hidden md:flex items-center justify-center absolute top-1/2 z-20 bg-slate-800 hover:bg-cyan-600 text-slate-200 border border-slate-600 w-8 h-8 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 ${isSidebarVisible ? 'left-80 lg:left-96' : 'left-4'}`}
@@ -216,8 +226,12 @@ const App: React.FC = () => {
             >
                 {isSidebarVisible ? <ChevronLeftIcon className="w-5 h-5" /> : <ChevronRightIcon className="w-5 h-5" />}
             </button>
-          <aside className={`w-full md:w-80 lg:w-96 bg-slate-900/30 border-r border-slate-700/50 p-4 overflow-y-auto shrink-0 transition-all duration-300 ease-in-out ${!isSidebarVisible && 'md:-ml-80 lg:-ml-96'}`}>
-            <div className="h-full">
+            <aside 
+                className={`fixed inset-y-0 left-0 z-30 w-80 bg-slate-900 border-r border-slate-700/50 p-4 overflow-y-auto shrink-0 transition-transform duration-300 ease-in-out 
+                md:relative md:transform-none md:bg-slate-900/30
+                ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+                ${!isSidebarVisible ? 'md:-ml-80' : 'md:ml-0'}`}
+            >
                 <DeviceList
                   devices={devices}
                   topology={topology}
@@ -227,42 +241,44 @@ const App: React.FC = () => {
                   onSelectDevice={handleSelectDevice}
                   selectedDeviceId={selectedDeviceId}
                   onAddDevice={() => setAddDeviceModalOpen(true)}
-                  currentView={currentView}
-                  setCurrentView={handleSetView}
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                   onPrint={handlePrint}
                   onOpenRecycleBin={() => setRecycleBinOpen(true)}
                 />
+            </aside>
+          <section className="flex-grow flex flex-col overflow-y-auto">
+            <div className="p-4 md:p-6 lg:p-8 flex flex-col flex-grow">
+              <ViewNavigator currentView={currentView} setView={handleSetView} />
+              <div className="mt-4 flex-grow relative">
+                <MainContent
+                  view={currentView}
+                  selectedDevice={selectedDevice}
+                  onSelectDevice={handleSelectDevice}
+                  macFormat={macFormat}
+                  addConnection={addConnection}
+                  updateConnection={updateConnection}
+                  deleteConnection={deleteConnection}
+                  updateDevice={updateDevice}
+                  deleteDevice={handleDeleteDevice}
+                  duplicateDevice={duplicateDevice}
+                  devices={devices}
+                  topology={topology}
+                  addTopologyLink={addTopologyLink}
+                  deleteTopologyLink={deleteTopologyLink}
+                  deleteAllLinksForDevice={deleteAllLinksForDevice}
+                  rooms={rooms}
+                  racks={racks}
+                  addRoom={addRoom}
+                  updateRoom={updateRoom}
+                  deleteRoom={deleteRoom}
+                  addRack={addRack}
+                  updateRack={updateRack}
+                  deleteRack={deleteRack}
+                  updateDevicePlacement={updateDevicePlacement}
+                />
+              </div>
             </div>
-          </aside>
-          <section className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto">
-            <MainContent
-              view={currentView}
-              selectedDevice={selectedDevice}
-              onSelectDevice={handleSelectDevice}
-              macFormat={macFormat}
-              addConnection={addConnection}
-              updateConnection={updateConnection}
-              deleteConnection={deleteConnection}
-              updateDevice={updateDevice}
-              deleteDevice={handleDeleteDevice}
-              duplicateDevice={duplicateDevice}
-              devices={devices}
-              topology={topology}
-              addTopologyLink={addTopologyLink}
-              deleteTopologyLink={deleteTopologyLink}
-              deleteAllLinksForDevice={deleteAllLinksForDevice}
-              rooms={rooms}
-              racks={racks}
-              addRoom={addRoom}
-              updateRoom={updateRoom}
-              deleteRoom={deleteRoom}
-              addRack={addRack}
-              updateRack={updateRack}
-              deleteRack={deleteRack}
-              updateDevicePlacement={updateDevicePlacement}
-            />
           </section>
         </main>
         {isAddDeviceModalOpen && (

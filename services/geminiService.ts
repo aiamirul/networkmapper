@@ -15,7 +15,7 @@ The network appears to be in a \`healthy state\`, with no immediate critical iss
 
 ### Recommendations
 *   **Security:** Consider implementing VLANs to segment traffic between workstations and servers.
-*   **Redundancy:** Add a redundant link between \`Core Switch 1\` and the \`Edge Router\` to prevent a single point of failure.
+*   **Redundancy:** Add a redundant link between \`Core Switch 1\` and the \`Edge Router\` to prevent a single point of of failure.
 *   **IP Management:** The IP address \`192.168.1.101\` is assigned via DHCP but is very close to the static IP range. Consider adjusting the DHCP scope.
 `;
 
@@ -57,8 +57,8 @@ export const getNetworkAnalysis = async (networkState: object): Promise<string> 
             model: model,
             contents: prompt
         });
-        // FIX: The response from the Gemini API is extracted via the text() method.
-        return response.text();
+        // FIX: The response from the Gemini API is extracted via the .text property.
+        return response.text;
     } catch (error) {
         console.error("Error fetching network analysis from Gemini:", error);
         return "An error occurred while analyzing the network. Please check the console for details.";

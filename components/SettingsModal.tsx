@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { XIcon, UploadIcon, DownloadIcon, RefreshIcon } from './icons/Icons';
+import { XIcon, UploadIcon, DownloadIcon, RefreshIcon, LinkIcon, QrCodeIcon, CheckIcon } from './icons/Icons';
 import { RemoteConfig, Device, TopologyLink, Room, Rack } from '../types';
 import { encryptForRemote, decryptFromRemote } from '../services/cryptoService';
 import { fetchRemoteConfigs, saveRemoteConfig } from '../services/api';
+import { QRCodeModal } from './QRCodeModal';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -19,6 +20,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('');
+  
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [copiedConfigDate, setCopiedConfigDate] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('netdiagram_serverUrl', serverUrl);
@@ -109,8 +113,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
     }
   };
 
+  const handleCopyLink = (config: RemoteConfig) => {
+    const configUrl = `${serverUrl}?username=${encodeURIComponent(username)}&date=${encodeURIComponent(config.date)}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?json_source=${encodeURIComponent(configUrl)}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+        setCopiedConfigDate(config.date);
+        setTimeout(() => setCopiedConfigDate(null), 2000);
+    });
+  };
+
+  const handleShowQr = (config: RemoteConfig) => {
+    const configUrl = `${serverUrl}?username=${encodeURIComponent(username)}&date=${encodeURIComponent(config.date)}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?json_source=${encodeURIComponent(configUrl)}`;
+    setQrCodeUrl(shareUrl);
+  };
+
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 border-b border-slate-700 flex justify-between items-center">
@@ -158,13 +178,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
                     {!isLoading && !error && configs.length > 0 && (
                         <ul className="divide-y divide-slate-700">
                            {configs.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(config => (
-                               <li key={config.date} className="p-3 flex justify-between items-center">
+                               <li key={config.date} className="p-3 flex justify-between items-center gap-2">
                                    <div>
                                        <p className="font-semibold text-slate-300">{new Date(config.date).toLocaleString()}</p>
                                    </div>
-                                   <button onClick={() => handleLoad(config)} disabled={isLoading || !passphrase} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-md font-semibold text-sm transition-colors disabled:bg-slate-500 disabled:cursor-not-allowed">
-                                        <DownloadIcon className="w-4 h-4" /> Load
-                                   </button>
+                                   <div className="flex items-center gap-1">
+                                       <button onClick={() => handleCopyLink(config)} className={`flex items-center gap-2 px-3 py-2 rounded-md font-semibold text-sm transition-colors ${copiedConfigDate === config.date ? 'bg-green-500/10 text-green-400' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`} title="Copy Share Link">
+                                            {copiedConfigDate === config.date ? <CheckIcon className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />}
+                                       </button>
+                                       <button onClick={() => handleShowQr(config)} className="p-2 rounded-md font-semibold text-sm transition-colors bg-slate-700 hover:bg-slate-600 text-slate-300" title="Show QR Code">
+                                            <QrCodeIcon className="w-4 h-4" />
+                                       </button>
+                                       <button onClick={() => handleLoad(config)} disabled={isLoading || !passphrase} className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-md font-semibold text-sm transition-colors disabled:bg-slate-500 disabled:cursor-not-allowed">
+                                            <DownloadIcon className="w-4 h-4" /> Load
+                                       </button>
+                                   </div>
                                </li>
                            ))}
                         </ul>
@@ -177,5 +205,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, networkSt
         </div>
       </div>
     </div>
+    {qrCodeUrl && <QRCodeModal url={qrCodeUrl} onClose={() => setQrCodeUrl(null)} />}
+    </>
   );
 };

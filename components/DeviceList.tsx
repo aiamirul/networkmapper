@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Device, DeviceType, TopologyLink, View, Room, Rack, MacFormat } from '../types';
 import { RouterIcon, SwitchIcon, DiagramIcon, PlusIcon, UploadIcon, DownloadIcon, PCIcon, ServerIcon, APIcon, PrinterIcon, SettingsIcon, SearchIcon, PrintIcon, LockIcon, DotsVerticalIcon, TrashIcon, ViewGridIcon, CloudServerIcon, LinkIcon } from './icons/Icons';
@@ -16,8 +17,6 @@ interface DeviceListProps {
   onSelectDevice: (id: string) => void;
   selectedDeviceId: string | null;
   onAddDevice: () => void;
-  currentView: View;
-  setCurrentView: (view: View) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onPrint: () => void;
@@ -47,7 +46,7 @@ const DeviceIcon = ({ type }: { type: DeviceType }) => {
   }
 };
 
-export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms, racks, importConfiguration, onSelectDevice, selectedDeviceId, onAddDevice, currentView, setCurrentView, searchQuery, setSearchQuery, onPrint, onOpenRecycleBin }) => {
+export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms, racks, importConfiguration, onSelectDevice, selectedDeviceId, onAddDevice, searchQuery, setSearchQuery, onPrint, onOpenRecycleBin }) => {
   const [isExportEncryptModalOpen, setExportEncryptModalOpen] = useState(false);
   const [isImportDecryptModalOpen, setImportDecryptModalOpen] = useState(false);
   const [isUrlImportModalOpen, setUrlImportModalOpen] = useState(false);
@@ -283,29 +282,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, topology, rooms
 
         <nav className="flex-grow overflow-y-auto">
           <ul>
-            <li className="mb-2">
-              <button
-                onClick={() => setCurrentView(View.DIAGRAM)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors text-slate-300 ${
-                  currentView === View.DIAGRAM ? 'bg-cyan-500/20 text-cyan-300' : 'hover:bg-slate-700/50'
-                }`}
-              >
-                <DiagramIcon className="w-5 h-5" />
-                <span className="font-medium">Topology Diagram</span>
-              </button>
-            </li>
-            <li className="mb-2">
-              <button
-                onClick={() => setCurrentView(View.PHYSICAL)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-md transition-colors text-slate-300 ${
-                  currentView === View.PHYSICAL ? 'bg-cyan-500/20 text-cyan-300' : 'hover:bg-slate-700/50'
-                }`}
-              >
-                <ViewGridIcon className="w-5 h-5" />
-                <span className="font-medium">Physical Layout</span>
-              </button>
-            </li>
-            <hr className="border-t border-slate-700 my-2" />
             {filteredDevices.map(device => (
               <li key={device.id} className="mb-1">
                 <button

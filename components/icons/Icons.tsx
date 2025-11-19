@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 type IconProps = {
@@ -223,5 +222,23 @@ export const CutIcon: React.FC<IconProps> = ({ className }) => (
 export const AlertTriangleIcon: React.FC<IconProps> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    </svg>
+);
+
+export const MenuIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+);
+
+export const QrCodeIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.5a.75.75 0 00-.75.75v3.75c0 .414.336.75.75.75h3.75a.75.75 0 00.75-.75V5.25a.75.75 0 00-.75-.75H3.75zM9 4.5a.75.75 0 01.75.75v3.75c0 .414-.336.75-.75.75H5.25a.75.75 0 01-.75-.75V5.25a.75.75 0 01.75-.75H9zM3.75 9.75a.75.75 0 00-.75.75v3.75c0 .414.336.75.75.75h3.75a.75.75 0 00.75-.75v-3.75a.75.75 0 00-.75-.75H3.75zM9 9.75a.75.75 0 01.75.75v3.75c0 .414-.336.75-.75.75H5.25a.75.75 0 01-.75-.75v-3.75a.75.75 0 01.75-.75H9zm.75 5.25h3.75a.75.75 0 01.75.75v3.75a.75.75 0 01-.75.75h-3.75a.75.75 0 01-.75-.75V15.75a.75.75 0 01.75-.75zm.75-5.25h.75a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zm3 0h.75a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zm-3 3h.75a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zm3 0h.75a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zm-3 3h.75a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75zm3 0h.75a.75.75 0 01.75.75v.75a.75.75 0 01-1.5 0v-.75a.75.75 0 01.75-.75z" />
+    </svg>
+);
+
+export const CheckIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
 );

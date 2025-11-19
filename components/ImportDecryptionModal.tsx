@@ -1,12 +1,11 @@
-
 import React, { useState } from 'react';
 import { Device, TopologyLink, Room, Rack } from '../types';
-import { decryptData } from '../services/cryptoService';
+import { decryptData, decryptFromRemote } from '../services/cryptoService';
 import { XIcon } from './icons/Icons';
 
 interface ImportDecryptionModalProps {
   onClose: () => void;
-  encryptedData: { salt: string; data: string };
+  encryptedData: { salt: string; data?: string; nonce?: string, ciphertext?: string };
   onSuccess: (config: { devices: Device[], topology: TopologyLink[], rooms?: Room[], racks?: Rack[] }) => void;
 }
 
@@ -25,8 +24,20 @@ export const ImportDecryptionModal: React.FC<ImportDecryptionModalProps> = ({ on
     setIsDecrypting(true);
     setError(null);
     try {
-      const decryptedData = await decryptData(encryptedData.data, passphrase, encryptedData.salt);
-      if (Array.isArray(decryptedData.devices) && Array.isArray(decryptedData.topology)) {
+      let decryptedData;
+      if (encryptedData.data) { // Local file format
+        decryptedData = await decryptData(encryptedData.data, passphrase, encryptedData.salt);
+      } else if (encryptedData.nonce && encryptedData.ciphertext) { // Remote format
+        decryptedData = await decryptFromRemote({
+          salt: encryptedData.salt,
+          nonce: encryptedData.nonce,
+          ciphertext: encryptedData.ciphertext,
+        }, passphrase);
+      } else {
+          throw new Error("Invalid encrypted data format.");
+      }
+
+      if (decryptedData && Array.isArray(decryptedData.devices) && Array.isArray(decryptedData.topology)) {
         onSuccess(decryptedData);
       } else {
         throw new Error('Decrypted data is not in the expected format.');
